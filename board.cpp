@@ -1,5 +1,7 @@
 #include "board.h"
 
+#include <QColor>
+
 Board::Board()
 {
 
@@ -7,19 +9,21 @@ Board::Board()
 
 int Board::rowCount(const QModelIndex &parent) const
 {
-    return 3;
+    return 10;
 }
 
 int Board::columnCount(const QModelIndex &parent) const
 {
-    return 3;
+    return 10;
 }
 
 QVariant Board::data(const QModelIndex &index, int role) const
 {
+    //temporary color array (DELETE LATER)
+    QColor colors[] = {"red", "blue", "yellow", "black", "green"};
     switch (role) {
-    case Qt::DisplayRole:
-        return QString("%1, %2").arg(index.column()).arg(index.row());
+    case Qt::DecorationRole:
+        return colors[(index.row()+index.column()) % 5];
     default:
         break;
     }
@@ -29,5 +33,5 @@ QVariant Board::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> Board::roleNames() const
 {
-    return { {Qt::DisplayRole, "display"} };
+    return { {Qt::DecorationRole, "colorBall"} };
 }

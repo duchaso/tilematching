@@ -6,25 +6,25 @@ Window {
     id: root
 
     width: 640
-    height: 480
+    height: 640
     visible: true
     title: qsTr("Hello World")
 
     TableView {
         anchors.fill: parent
-        columnSpacing: 1
-        rowSpacing: 1
+        columnWidthProvider: function (column) { return root.width / boardModel.columnCount() }
+        rowHeightProvider: function (row) { return root.height / boardModel.rowCount() }
         clip: true
 
-        model: Board {}
+        model: Board {
+            id: boardModel
+        }
 
         delegate: Rectangle {
             implicitWidth: 100
-            implicitHeight: 50
-
-            Text {
-                text: display
-            }
+            implicitHeight: 100
+            radius: 100
+            color: colorBall
         }
     }
 }
