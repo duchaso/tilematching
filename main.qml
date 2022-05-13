@@ -24,7 +24,7 @@ Window {
             implicitWidth: 100
             implicitHeight: 100
             radius: 100
-            color: colorBall
+            color: colour
         }
     }
 }

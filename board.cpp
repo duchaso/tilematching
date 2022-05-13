@@ -6,7 +6,6 @@
 Board::Board() : m_dimension(15)
 {
     m_colors = {"red", "blue", "yellow", "grey", "green"};
-
     generateBoard();
 }
 
@@ -34,35 +33,22 @@ QVariant Board::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> Board::roleNames() const
 {
-    return { {Qt::DecorationRole, "colorBall"} };
+    return { {Qt::DecorationRole, "colour"} };
 }
 
 void Board::generateBoard()
 {
-    Colors temp;
-
-    for(auto& color : m_colors)
-    {
-        for(int i = 0; i < m_dimension * m_dimension / m_colors.size(); ++i)
-        {
-            temp.append(color);
-        }
-    }
-
     std::random_device rd;
-    auto rng = std::default_random_engine{rd()};
-    std::shuffle(temp.begin(), temp.end(), rng);
+    std::default_random_engine e(rd());
+    std::uniform_int_distribution<int> uniform_dist(0, m_colors.size()-1);
 
-    int cnt = 0;
-    for(int i = 0; i < m_dimension; ++i)
+    for (int i = 0; i < m_dimension; ++i)
     {
         Colors v;
-        for(int j = 0; j < m_dimension; ++j)
+        for (int j = 0; j < m_dimension; ++j)
         {
-            v.append(temp[cnt]);
-            ++cnt;
+            v.append(m_colors[uniform_dist(e)]);
         }
         m_data.append(v);
     }
-
 }
