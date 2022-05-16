@@ -24,6 +24,7 @@ public:
 private:
     void generateBoard();
     bool isMovable(const QModelIndex& index);
+    void popTiles(const QModelIndex& index);
 
 private:
     Matrix m_data;

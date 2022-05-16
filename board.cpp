@@ -1,5 +1,9 @@
 #include "board.h"
 
+#include <QQueue>
+#include <QDebug>
+#include <QPoint>
+
 #include <utility>
 #include <random>
 
@@ -41,7 +45,50 @@ bool Board::isMovable(const QModelIndex &index)
     auto abs = [](int n) { return (n > 0) ? n : -n; };
 
     return ( (index.row() == forMove.row() && abs(index.column() - forMove.column()) == 1)
-          || (index.column() == forMove.column() && abs(index.row() - forMove.row()) == 1) ) ? true : false;
+             || (index.column() == forMove.column() && abs(index.row() - forMove.row()) == 1) ) ? true : false;
+}
+
+void Board::popTiles(const QModelIndex& index)
+{
+    using Directions = QVector<QPoint>;
+
+    QVector<QPoint> forPopping;
+    static const Directions directions = {{-1,0}, {0,1}, {1,0}, {0,-1}};
+    QPoint current(index.row(), index.column());
+    auto inx = [this] (const QPoint& current) { return (m_dimension * current.x() + current.y()); }; // index 2d to 1d array
+    auto isValid = [this] (QPoint& p) { return (p.x() < 0) || (p.y() < 0) || (p.x() > m_dimension - 1) || (p.y() > m_dimension - 1) ? false : true; };
+
+    QVector<bool> visited(m_dimension * m_dimension, false);
+    QQueue<QPoint> queue;
+
+    visited[inx(current)] = true;
+    queue.enqueue(current);
+    forPopping.append(current);
+
+    while (!queue.empty())
+    {
+        current = queue.head();
+        qDebug() << current.x() << " " << current.y() << "\n";
+        queue.dequeue();
+
+        for (const auto& direction : directions)
+        {
+            auto forCheck = current + direction;
+            if(isValid(forCheck) && !visited[inx(forCheck)] &&  m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()])
+            {
+                visited[inx(forCheck)] = true;
+                forPopping.append(forCheck);
+                queue.enqueue(forCheck);
+            }
+        }
+    }
+
+    beginResetModel();
+    for (auto& ball : forPopping)
+    {
+        m_data[ball.x()][ball.y()] = Qt::transparent;
+    }
+    endResetModel();
 }
 
 void Board::moveTile(const QModelIndex &tile)
@@ -54,6 +101,7 @@ void Board::moveTile(const QModelIndex &tile)
         std::swap(m_data[tile.row()][tile.column()], m_data[forMove.row()][forMove.column()]);
         emit dataChanged(forMove, forMove);
         emit dataChanged(tile, tile);
+        popTiles(tile);
         forMove = QModelIndex();
     }
 }
