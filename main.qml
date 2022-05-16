@@ -25,6 +25,14 @@ Window {
             implicitHeight: 100
             radius: 100
             color: colour
+
+            MouseArea {
+                anchors.fill: parent
+
+                onClicked: {
+                     boardModel.moveTile(boardModel.index(row, column));
+                }
+            }
         }
     }
 }

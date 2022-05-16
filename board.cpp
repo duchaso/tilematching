@@ -3,7 +3,7 @@
 #include <utility>
 #include <random>
 
-Board::Board() : m_dimension(15)
+Board::Board() : m_dimension(15), forMove(QModelIndex())
 {
     m_colors = {"red", "blue", "yellow", "grey", "green"};
     generateBoard();
@@ -34,6 +34,19 @@ QVariant Board::data(const QModelIndex &index, int role) const
 QHash<int, QByteArray> Board::roleNames() const
 {
     return { {Qt::DecorationRole, "colour"} };
+}
+
+void Board::moveTile(const QModelIndex &tile)
+{
+    if (!forMove.isValid())
+    {
+        forMove = tile;
+    } else {
+        std::swap(m_data[tile.row()][tile.column()], m_data[forMove.row()][forMove.column()]);
+        emit dataChanged(forMove, forMove);
+        emit dataChanged(tile, tile);
+        forMove = QModelIndex();
+    }
 }
 
 void Board::generateBoard()
