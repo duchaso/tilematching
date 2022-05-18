@@ -28,6 +28,8 @@ QVariant Board::data(const QModelIndex &index, int role) const
     switch (role) {
     case Qt::DecorationRole:
         return m_data[index.row()][index.column()].color();
+    case Qt::UserRole:
+        return m_data[index.row()][index.column()].isActive();
     default:
         break;
     }
@@ -37,7 +39,7 @@ QVariant Board::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> Board::roleNames() const
 {
-    return { {Qt::DecorationRole, "colour"} };
+    return { {Qt::DecorationRole, "colour"}, {Qt::UserRole, "active"} };
 }
 
 bool Board::isMovable(const QModelIndex &index)
@@ -102,11 +104,15 @@ void Board::popTiles(const QModelIndex& index)
 
 void Board::moveTile(const QModelIndex &tile)
 {
+
     if (!forMove.isValid())
     {
         forMove = tile;
+        m_data[forMove.row()][forMove.column()].setActive(true);
+        emit dataChanged(forMove, forMove);
     }
     else if (isMovable(tile)) {
+        m_data[forMove.row()][forMove.column()].setActive(false);
         std::swap(m_data[tile.row()][tile.column()], m_data[forMove.row()][forMove.column()]);
         emit dataChanged(forMove, forMove);
         emit dataChanged(tile, tile);

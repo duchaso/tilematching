@@ -11,9 +11,13 @@ Window {
     title: qsTr("Hello World")
 
     TableView {
+        property int spacing: 2
+
         anchors.fill: parent
-        columnWidthProvider: function (column) { return root.width / boardModel.columnCount() }
-        rowHeightProvider: function (row) { return root.height / boardModel.rowCount() }
+        columnSpacing: spacing
+        rowSpacing: spacing
+        columnWidthProvider: function (column) { return root.width / boardModel.columnCount() - spacing }
+        rowHeightProvider: function (row) { return root.height / boardModel.rowCount() - spacing }
         clip: true
 
         model: Board {
@@ -30,17 +34,16 @@ Window {
                 id: blinking
 
                 loops: Animation.Infinite
-                running: false
+                running: active
                 from: colour
                 to: "white"
-                duration: 1000
+                duration: 1500
             }
 
             MouseArea {
                 anchors.fill: parent
 
-                onClicked: {
-                    blinking.start();
+                onClicked: {	
                     boardModel.moveTile(boardModel.index(row, column));
                 }
             }
