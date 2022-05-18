@@ -20,6 +20,9 @@ set(PROJECT_SOURCES
 
         board.h
         board.cpp
+
+        tile.h
+        tile.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

@@ -26,11 +26,22 @@ Window {
             radius: 100
             color: colour
 
+            ColorAnimation on color {
+                id: blinking
+
+                loops: Animation.Infinite
+                running: false
+                from: colour
+                to: "white"
+                duration: 1000
+            }
+
             MouseArea {
                 anchors.fill: parent
 
                 onClicked: {
-                     boardModel.moveTile(boardModel.index(row, column));
+                    blinking.start();
+                    boardModel.moveTile(boardModel.index(row, column));
                 }
             }
         }

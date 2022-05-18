@@ -27,7 +27,7 @@ QVariant Board::data(const QModelIndex &index, int role) const
 {
     switch (role) {
     case Qt::DecorationRole:
-        return m_data[index.row()][index.column()];
+        return m_data[index.row()][index.column()].color();
     default:
         break;
     }
@@ -44,8 +44,10 @@ bool Board::isMovable(const QModelIndex &index)
 {
     auto abs = [](int n) { return (n > 0) ? n : -n; };
 
-    return ( (index.row() == forMove.row() && abs(index.column() - forMove.column()) == 1)
-             || (index.column() == forMove.column() && abs(index.row() - forMove.row()) == 1) ) ? true : false;
+    return ( (index.row() == forMove.row() &&
+              abs(index.column() - forMove.column()) == 1) ||
+             (index.column() == forMove.column() &&
+              abs(index.row() - forMove.row()) == 1) ) ? true : false;
 }
 
 void Board::popTiles(const QModelIndex& index)
@@ -55,9 +57,16 @@ void Board::popTiles(const QModelIndex& index)
     QVector<QPoint> forPopping;
     static const Directions directions = {{-1,0}, {0,1}, {1,0}, {0,-1}};
     QPoint current(index.row(), index.column());
-    auto inx = [this] (const QPoint& current) { return (m_dimension * current.x() + current.y()); }; // index 2d to 1d array
-    auto isValid = [this] (QPoint& p) { return (p.x() < 0) || (p.y() < 0) || (p.x() > m_dimension - 1) || (p.y() > m_dimension - 1) ? false : true; };
-
+    auto inx = [this] (const QPoint& current) -> int
+                {
+                    return (m_dimension * current.x() + current.y());
+                }; // index 2d to 1d array
+    auto isValid = [this] (QPoint& p)
+                    {
+                        return (p.x() < 0) || (p.y() < 0) ||
+                                (p.x() > m_dimension - 1) ||
+                                (p.y() > m_dimension - 1) ? false : true;
+                    };
     QVector<bool> visited(m_dimension * m_dimension, false);
     QQueue<QPoint> queue;
 
@@ -101,7 +110,8 @@ void Board::moveTile(const QModelIndex &tile)
         std::swap(m_data[tile.row()][tile.column()], m_data[forMove.row()][forMove.column()]);
         emit dataChanged(forMove, forMove);
         emit dataChanged(tile, tile);
-        popTiles(tile);
+//        popTiles(tile);
+//        popTiles(forMove);
         forMove = QModelIndex();
     }
 }
@@ -114,7 +124,7 @@ void Board::generateBoard()
 
     for (int i = 0; i < m_dimension; ++i)
     {
-        Colors v;
+        QVector<Tile> v;
         for (int j = 0; j < m_dimension; ++j)
         {
             v.append(m_colors[uniform_dist(e)]);

@@ -4,12 +4,14 @@
 #include <QAbstractTableModel>
 #include <QColor>
 
+#include "tile.h"
+
 class Board : public QAbstractTableModel
 {
     Q_OBJECT
 
     using Colors = QVector<QColor>;
-    using Matrix = QVector<Colors>;
+    using Matrix = QVector<QVector<Tile>>;
 
 public:
     Board();
