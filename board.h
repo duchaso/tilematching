@@ -13,6 +13,13 @@ class Board : public QAbstractTableModel
     using Colors = QVector<QColor>;
     using Matrix = QVector<QVector<Tile>>;
 
+    enum Direction {
+        UP,
+        RIGHT,
+        DOWN,
+        LEFT,
+    };
+
 public:
     Board();
 
@@ -22,6 +29,9 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void moveTile(const QModelIndex& tile);
+
+signals:
+    void startAnimation(int index, int direction);
 
 private:
     void generateBoard();

@@ -114,6 +114,25 @@ void Board::moveTile(const QModelIndex &tile)
     else if (isMovable(tile)) {
         m_data[forMove.row()][forMove.column()].setActive(false);
         std::swap(m_data[tile.row()][tile.column()], m_data[forMove.row()][forMove.column()]);
+
+        if(forMove.row() == tile.row()) {
+            if(forMove.column() - tile.column() == 1) {
+                emit startAnimation(m_dimension * forMove.column() + forMove.row(), LEFT);
+                emit startAnimation(m_dimension * tile.column() + tile.row(), RIGHT);
+            } else {
+                emit startAnimation(m_dimension * forMove.column() + forMove.row(), RIGHT);
+                emit startAnimation(m_dimension * tile.column() + tile.row(), LEFT);
+            }
+        } else if(forMove.column() == tile.column()) {
+            if(forMove.row() - tile.row() == 1) {
+                emit startAnimation(m_dimension * forMove.column() + forMove.row(), UP);
+                emit startAnimation(m_dimension * tile.column() + tile.row(), DOWN);
+            } else {
+                emit startAnimation(m_dimension * forMove.column() + forMove.row(), DOWN);
+                emit startAnimation(m_dimension * tile.column() + tile.row(), UP);
+            }
+        }
+
         emit dataChanged(forMove, forMove);
         emit dataChanged(tile, tile);
 //        popTiles(tile);
