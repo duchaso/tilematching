@@ -57,7 +57,8 @@ void Board::popTiles(const QModelIndex& index)
 {
     using Directions = QVector<QPoint>;
 
-    QVector<QPoint> forPopping;
+    QVector<QPoint> forPoppingH;
+    QVector<QPoint> forPoppingV;
     static const Directions directions = {{-1,0}, {0,1}, {1,0}, {0,-1}};
     QPoint current(index.row(), index.column());
     auto inx = [this] (const QPoint& current) -> int
@@ -76,32 +77,54 @@ void Board::popTiles(const QModelIndex& index)
 
     visited[inx(current)] = true;
     queue.enqueue(current);
-    forPopping.append(current);
+    forPoppingH.append(current);
+    forPoppingV.append(current);
 
     while (!queue.empty())
     {
-        current = queue.dequeue();
+        current = queue.head();
         qDebug() << current.x() << " " << current.y() << "\n";
         queue.dequeue();
 
-        for (const auto& direction : directions)
+        for (int i = 0; i < directions.size(); i += 2)
         {
+            const auto& direction = directions[i];
             auto forCheck = current + direction;
             if(isValid(forCheck) && !visited[inx(forCheck)] &&  m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()])
             {
                 visited[inx(forCheck)] = true;
-                forPopping.append(forCheck);
+                forPoppingH.append(forCheck);
+                queue.enqueue(forCheck);
+            }
+        }
+        for (int i = 1; i < directions.size(); i += 2)
+        {
+            const auto& direction = directions[i];
+            auto forCheck = current + direction;
+            if(isValid(forCheck) && !visited[inx(forCheck)] &&  m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()])
+            {
+                visited[inx(forCheck)] = true;
+                forPoppingV.append(forCheck);
                 queue.enqueue(forCheck);
             }
         }
     }
-
-    beginResetModel();
-    for (auto& ball : forPopping)
-    {
-        m_data[ball.x()][ball.y()] = Qt::transparent;
+    if (forPoppingH.size() > 2) {
+        beginResetModel();
+        for (auto& ball : forPoppingH)
+        {
+            m_data[ball.x()][ball.y()] = Qt::transparent;
+        }
+        endResetModel();
     }
-    endResetModel();
+    if (forPoppingV.size() > 2) {
+        beginResetModel();
+        for (auto& ball : forPoppingV)
+        {
+            m_data[ball.x()][ball.y()] = Qt::transparent;
+        }
+        endResetModel();
+    }
 }
 
 void Board::moveTile(const QModelIndex &tile)
@@ -135,8 +158,8 @@ void Board::moveTile(const QModelIndex &tile)
 
         emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
         emit dataChanged(tile, tile);
-        //        popTiles(tile);
-        //        popTiles(m_selectedTileIndex);
+        popTiles(tile);
+        popTiles(m_selectedTileIndex);
         m_selectedTileIndex = QModelIndex();
     }
 }
