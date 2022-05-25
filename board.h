@@ -42,7 +42,7 @@ private:
     Matrix m_data;
     Colors m_colors;
     int m_dimension;
-    QModelIndex forMove;
+    QModelIndex m_selectedTileIndex;
 };
 
 #endif // BOARD_H

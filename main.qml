@@ -34,7 +34,7 @@ Window {
             color: colour
 
 
-            NumberAnimation on x{
+            NumberAnimation on x {
                 id: movingX
 
                 property int shift: width + tableView.spacing
@@ -43,7 +43,7 @@ Window {
                 running: false
                 duration: 1000
             }
-            NumberAnimation on y{
+            NumberAnimation on y {
                 id: movingY
 
                 property int shift: height + tableView.spacing
