@@ -145,14 +145,23 @@ void Board::generateBoard()
 {
     std::random_device rd;
     std::default_random_engine e(rd());
-    std::uniform_int_distribution<int> uniform_dist(0, m_colors.size()-1);
+
+    Colors availableColors = m_colors;
+    QColor prevTop;
+    QColor prevLeft;
 
     for (int i = 0; i < m_dimension; ++i)
     {
         QVector<Tile> v;
         for (int j = 0; j < m_dimension; ++j)
         {
-            v.append(m_colors[uniform_dist(e)]);
+            availableColors = m_colors;
+            prevTop = (i != 0) ? m_data[i-1][j].color() : QColor();
+            prevLeft = (j != 0) ? v[j-1].color() : QColor();
+            availableColors.removeOne(prevTop);
+            availableColors.removeOne(prevLeft);
+            std::uniform_int_distribution<int> uniform_dist(0, availableColors.size()-1);
+            v.append(availableColors[uniform_dist(e)]);
         }
         m_data.append(v);
     }
