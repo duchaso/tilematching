@@ -3,6 +3,7 @@
 
 #include <QAbstractTableModel>
 #include <QColor>
+#include <QPoint>
 
 #include "tile.h"
 
@@ -12,6 +13,8 @@ class Board : public QAbstractTableModel
 
     using Colors = QVector<QColor>;
     using Matrix = QVector<QVector<Tile>>;
+    using Directions = QVector<QPoint>;
+
 
     enum Direction {
         UP,
@@ -22,6 +25,7 @@ class Board : public QAbstractTableModel
 
 public:
     Board();
+
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -45,6 +49,7 @@ private:
     Colors m_colors;
     int m_dimension;
     QModelIndex m_selectedTileIndex;
+    const Directions m_directions;
 };
 
 #endif // BOARD_H
