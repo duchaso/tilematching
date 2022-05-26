@@ -41,13 +41,14 @@ signals:
 private:
     void generateBoard();
     bool isMovable(const QModelIndex& index);
-    void popTiles(const QModelIndex& index);
+    bool popTiles(const QModelIndex& index);
     void shift(QVector<QPoint>& poppedTiles);
+    void fillEmpty();
 
 private:
     Matrix m_data;
     Colors m_colors;
-    int m_dimension;
+    const int m_dimension;
     QModelIndex m_selectedTileIndex;
     const Directions m_directions;
 };
