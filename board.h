@@ -29,6 +29,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void moveTile(const QModelIndex& tile);
+    Q_INVOKABLE void update();
 
 signals:
     void startAnimation(int index, int direction);
@@ -37,6 +38,7 @@ private:
     void generateBoard();
     bool isMovable(const QModelIndex& index);
     void popTiles(const QModelIndex& index);
+    void shift(QVector<QPoint>& poppedTiles);
 
 private:
     Matrix m_data;

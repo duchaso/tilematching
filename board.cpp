@@ -57,14 +57,6 @@ void Board::popTiles(const QModelIndex& index)
 {
     using Directions = QVector<QPoint>;
 
-    QVector<QPoint> forPoppingH;
-    QVector<QPoint> forPoppingV;
-    static const Directions directions = {{-1,0}, {0,1}, {1,0}, {0,-1}};
-    QPoint current(index.row(), index.column());
-    auto inx = [this] (const QPoint& current) -> int
-                {
-                    return (m_dimension * current.x() + current.y());
-                }; // index 2d to 1d array
     auto isValid = [this] (QPoint& p)
                     {
                         return ( (p.x() < 0)
@@ -72,50 +64,39 @@ void Board::popTiles(const QModelIndex& index)
                               || (p.x() > m_dimension - 1)
                               || (p.y() > m_dimension - 1) ? false : true );
                     };
-    QVector<bool> visited(m_dimension * m_dimension, false);
-    QQueue<QPoint> queue;
 
-    visited[inx(current)] = true;
-    queue.enqueue(current);
-    forPoppingH.append(current);
-    forPoppingV.append(current);
 
-    while (!queue.empty())
+    QPoint current(index.row(), index.column());
+    QVector<QPoint> forPoppingH{current};
+    QVector<QPoint> forPoppingV{current};
+    static const Directions directions = {{-1,0}, {0,1}, {1,0}, {0,-1}};
+
+    for (const auto& direction : directions)
     {
-        current = queue.head();
-        qDebug() << current.x() << " " << current.y() << "\n";
-        queue.dequeue();
-
-        for (int i = 0; i < directions.size(); i += 2)
+        if (direction == directions[LEFT] || direction == directions[RIGHT])
         {
-            const auto& direction = directions[i];
-            auto forCheck = current + direction;
-            if(isValid(forCheck) && !visited[inx(forCheck)] &&  m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()])
+            for (auto forCheck = current + direction;
+                 isValid(forCheck) && m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()];
+                 forCheck += direction)
             {
-                visited[inx(forCheck)] = true;
-                forPoppingH.append(forCheck);
-                queue.enqueue(forCheck);
-            }
-        }
-        for (int i = 1; i < directions.size(); i += 2)
-        {
-            const auto& direction = directions[i];
-            auto forCheck = current + direction;
-            if(isValid(forCheck) && !visited[inx(forCheck)] &&  m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()])
-            {
-                visited[inx(forCheck)] = true;
                 forPoppingV.append(forCheck);
-                queue.enqueue(forCheck);
+            }
+        } else {
+            for (auto forCheck = current + direction;
+                 isValid(forCheck) && m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()];
+                 forCheck += direction)
+            {
+                forPoppingH.append(forCheck);
             }
         }
     }
+
     if (forPoppingH.size() > 2) {
         beginResetModel();
         for (auto& ball : forPoppingH)
         {
             m_data[ball.x()][ball.y()] = Qt::transparent;
         }
-        endResetModel();
     }
     if (forPoppingV.size() > 2) {
         beginResetModel();
@@ -123,7 +104,6 @@ void Board::popTiles(const QModelIndex& index)
         {
             m_data[ball.x()][ball.y()] = Qt::transparent;
         }
-        endResetModel();
     }
 }
 
@@ -138,16 +118,19 @@ void Board::moveTile(const QModelIndex &tile)
         m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(false);
         std::swap(m_data[tile.row()][tile.column()], m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()]);
 
-        if(m_selectedTileIndex.row() == tile.row()) {
-            if(m_selectedTileIndex.column() - tile.column() == 1) {
+        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
+        emit dataChanged(tile, tile);
+
+        if (m_selectedTileIndex.row() == tile.row()) {
+            if (m_selectedTileIndex.column() - tile.column() == 1) {
                 emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), LEFT);
                 emit startAnimation(m_dimension * tile.column() + tile.row(), RIGHT);
             } else {
                 emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), RIGHT);
                 emit startAnimation(m_dimension * tile.column() + tile.row(), LEFT);
             }
-        } else if(m_selectedTileIndex.column() == tile.column()) {
-            if(m_selectedTileIndex.row() - tile.row() == 1) {
+        } else if (m_selectedTileIndex.column() == tile.column()) {
+            if (m_selectedTileIndex.row() - tile.row() == 1) {
                 emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), UP);
                 emit startAnimation(m_dimension * tile.column() + tile.row(), DOWN);
             } else {
@@ -156,12 +139,24 @@ void Board::moveTile(const QModelIndex &tile)
             }
         }
 
-        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
-        emit dataChanged(tile, tile);
+
         popTiles(tile);
         popTiles(m_selectedTileIndex);
+
         m_selectedTileIndex = QModelIndex();
+    } else {
+        m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(false);
+        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
+        m_selectedTileIndex = tile;
+        m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(true);
+        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
     }
+}
+
+void Board::update()
+{
+    beginResetModel();
+    endResetModel();
 }
 
 void Board::generateBoard()
