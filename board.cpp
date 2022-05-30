@@ -2,7 +2,6 @@
 
 #include <QQueue>
 #include <QDebug>
-#include <QPoint>
 
 #include <utility>
 #include <random>
@@ -10,8 +9,10 @@
 
 Board::Board() :
     m_dimension{6}
+  , m_data{Matrix(m_dimension, QVector<Tile>(m_dimension))}
   , m_selectedTileIndex{QModelIndex()}
   , m_colors{"red", "blue", "yellow", "grey", "green"}
+  , m_directions{{-1,0}, {0,1}, {1,0}, {0,-1}}
 {
     generateBoard();
 }
@@ -53,55 +54,121 @@ bool Board::isMovable(const QModelIndex &index)
               std::abs(index.row() - m_selectedTileIndex.row()) == 1) ) ? true : false;
 }
 
-void Board::popTiles(const QModelIndex& index)
+bool Board::popTiles(const QModelIndex& index)
 {
-    using Directions = QVector<QPoint>;
-
-    QVector<QPoint> forPopping;
-    static const Directions directions = {{-1,0}, {0,1}, {1,0}, {0,-1}};
     QPoint current(index.row(), index.column());
-    auto inx = [this] (const QPoint& current) -> int
-                {
-                    return (m_dimension * current.x() + current.y());
-                }; // index 2d to 1d array
-    auto isValid = [this] (QPoint& p)
-                    {
-                        return ( (p.x() < 0)
-                              || (p.y() < 0)
-                              || (p.x() > m_dimension - 1)
-                              || (p.y() > m_dimension - 1) ? false : true );
-                    };
-    QVector<bool> visited(m_dimension * m_dimension, false);
+    QVector<QPoint> forPopping{current};
+
+    for (const auto& direction : m_directions)
+    {
+        for (auto forCheck = current + direction;
+             isValid(forCheck) && m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()];
+             forCheck += direction)
+        {
+            forPopping.append(forCheck);
+        }
+    }
+
+    if (forPopping.size() > 2) {
+        for (auto& ball : forPopping)
+        {
+            m_data[ball.x()][ball.y()] = Qt::transparent;
+        }
+        shift(forPopping);
+    }
+    return (forPopping.size() > 2 ) ? true : false;
+}
+
+bool Board::isValid(QPoint &p)
+{
+    return ( (p.x() < 0)
+              || (p.y() < 0)
+              || (p.x() > m_dimension - 1)
+              || (p.y() > m_dimension - 1) ? false : true );
+}
+
+void Board::shift(QVector<QPoint> &poppedTiles)
+{
+    for (auto cur : poppedTiles) {
+        for (; isValid(cur) && m_data[cur.x()][cur.y()].color() == Qt::transparent; cur += m_directions[UP]);
+        for (; isValid(cur); cur += m_directions[UP])
+        {
+            for (auto next = cur + m_directions[DOWN];
+                 isValid(next) && m_data[next.x()][next.y()].color() == Qt::transparent;
+                 next += m_directions[DOWN])
+            {
+                auto prev = next + m_directions[UP];
+                std::swap(m_data[next.x()][next.y()], m_data[prev.x()][prev.y()]);
+            }
+        }
+    }
+}
+
+void Board::fillEmpty()
+{
+    QPoint current;
+    QVector<QPoint> toFill;
+    QVector<QVector<bool>> visited(m_dimension, QVector<bool>(m_dimension, false));
     QQueue<QPoint> queue;
 
-    visited[inx(current)] = true;
-    queue.enqueue(current);
-    forPopping.append(current);
-
-    while (!queue.empty())
+    bool found = false;
+    for (int i = 0; !found && i < m_data.size(); ++i)
     {
-        current = queue.dequeue();
-        qDebug() << current.x() << " " << current.y() << "\n";
-        queue.dequeue();
-
-        for (const auto& direction : directions)
+        for (int j = 0; j < m_data.first().size(); ++j)
         {
-            auto forCheck = current + direction;
-            if(isValid(forCheck) && !visited[inx(forCheck)] &&  m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()])
+            if (m_data[i][j].color() == Qt::transparent)
             {
-                visited[inx(forCheck)] = true;
-                forPopping.append(forCheck);
-                queue.enqueue(forCheck);
+                found = true;
+                current = {i, j};
+                break;
             }
         }
     }
 
-    beginResetModel();
-    for (auto& ball : forPopping)
+    visited[current.x()][current.y()] = true;
+    queue.enqueue(current);
+    toFill.append(current);
+
+    while (!queue.empty())
     {
-        m_data[ball.x()][ball.y()] = Qt::transparent;
+        current = queue.head();
+        queue.dequeue();
+
+        for (const auto& direction : m_directions)
+        {
+            auto check = current + direction;
+            if (	isValid(check)
+                    && !visited[check.x()][check.y()]
+                    && m_data[check.x()][check.y()].color() == Qt::transparent)
+            {
+                visited[check.x()][check.y()] = true;
+                toFill.append(check);
+                queue.enqueue(check);
+            }
+        }
     }
-    endResetModel();
+
+    for (const auto& cur : toFill)
+    {
+        m_data[cur.x()][cur.y()] = randColor(cur);
+    }
+}
+
+QColor Board::randColor(const QPoint &p) const
+{
+    std::random_device rd;
+    std::default_random_engine e(rd());
+
+    Colors availableColors = m_colors;
+    QColor prevTop;
+    QColor prevLeft;
+
+    prevTop = (p.x() != 0) ? m_data[p.x()-1][p.y()].color() : QColor();
+    prevLeft = (p.y() != 0) ? m_data[p.x()][p.y()-1].color() : QColor();
+    availableColors.removeOne(prevTop);
+    availableColors.removeOne(prevLeft);
+    std::uniform_int_distribution<int> uniform_dist(0, availableColors.size() - 1);
+    return availableColors[uniform_dist(e)];
 }
 
 void Board::moveTile(const QModelIndex &tile)
@@ -115,16 +182,19 @@ void Board::moveTile(const QModelIndex &tile)
         m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(false);
         std::swap(m_data[tile.row()][tile.column()], m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()]);
 
-        if(m_selectedTileIndex.row() == tile.row()) {
-            if(m_selectedTileIndex.column() - tile.column() == 1) {
+        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
+        emit dataChanged(tile, tile);
+
+        if (m_selectedTileIndex.row() == tile.row()) {
+            if (m_selectedTileIndex.column() - tile.column() == 1) {
                 emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), LEFT);
                 emit startAnimation(m_dimension * tile.column() + tile.row(), RIGHT);
             } else {
                 emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), RIGHT);
                 emit startAnimation(m_dimension * tile.column() + tile.row(), LEFT);
             }
-        } else if(m_selectedTileIndex.column() == tile.column()) {
-            if(m_selectedTileIndex.row() - tile.row() == 1) {
+        } else if (m_selectedTileIndex.column() == tile.column()) {
+            if (m_selectedTileIndex.row() - tile.row() == 1) {
                 emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), UP);
                 emit startAnimation(m_dimension * tile.column() + tile.row(), DOWN);
             } else {
@@ -133,29 +203,34 @@ void Board::moveTile(const QModelIndex &tile)
             }
         }
 
-        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
-        emit dataChanged(tile, tile);
-        //        popTiles(tile);
-        //        popTiles(m_selectedTileIndex);
+        popTiles(tile);
+        popTiles(m_selectedTileIndex);
+        fillEmpty();
+
         m_selectedTileIndex = QModelIndex();
+
+    } else {
+        m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(false);
+        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
+        m_selectedTileIndex = tile;
+        m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(true);
+        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
     }
+}
+
+void Board::update()
+{
+    beginResetModel();
+    endResetModel();
 }
 
 void Board::generateBoard()
 {
-    std::random_device rd;
-    std::default_random_engine e(rd());
-    std::uniform_int_distribution<int> uniform_dist(0, m_colors.size()-1);
-
     for (int i = 0; i < m_dimension; ++i)
     {
-        QVector<Tile> v;
         for (int j = 0; j < m_dimension; ++j)
         {
-            v.append(m_colors[uniform_dist(e)]);
+            m_data[i][j] = randColor(QPoint(i, j));
         }
-        m_data.append(v);
     }
 }
-
-

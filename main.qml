@@ -42,6 +42,7 @@ Window {
                 alwaysRunToEnd: true
                 running: false
                 duration: 1000
+                onFinished: boardModel.update();
             }
             NumberAnimation on y {
                 id: movingY
@@ -51,6 +52,7 @@ Window {
                 alwaysRunToEnd: true
                 running: false
                 duration: 1000
+                onFinished: boardModel.update();
             }
 
 
