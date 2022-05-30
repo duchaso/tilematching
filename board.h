@@ -42,13 +42,15 @@ private:
     void generateBoard();
     bool isMovable(const QModelIndex& index);
     bool popTiles(const QModelIndex& index);
+    bool isValid(QPoint& p);
     void shift(QVector<QPoint>& poppedTiles);
     void fillEmpty();
+    QColor randColor(const QPoint& p) const;
 
 private:
+    const int m_dimension;
     Matrix m_data;
     Colors m_colors;
-    const int m_dimension;
     QModelIndex m_selectedTileIndex;
     const Directions m_directions;
 };
