@@ -13,6 +13,11 @@ Board::Board() :
   , m_selectedTileIndex{QModelIndex()}
   , m_colors{"red", "blue", "yellow", "grey", "green"}
   , m_directions{{-1,0}, {0,1}, {1,0}, {0,-1}}
+  , m_isWon(false)
+  , m_score{0}
+  , m_steps{0}
+  , m_scoreToWin{20}
+  , m_stepsToLose{10}
 {
     generateBoard();
 }
@@ -74,7 +79,9 @@ bool Board::popTiles(const QModelIndex& index)
         {
             m_data[ball.x()][ball.y()] = Qt::transparent;
         }
+        setScore(score() + forPopping.size());
         shift(forPopping);
+        fillEmpty();
     }
     return (forPopping.size() > 2 ) ? true : false;
 }
@@ -185,30 +192,22 @@ void Board::moveTile(const QModelIndex &tile)
         emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
         emit dataChanged(tile, tile);
 
-        if (m_selectedTileIndex.row() == tile.row()) {
-            if (m_selectedTileIndex.column() - tile.column() == 1) {
-                emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), LEFT);
-                emit startAnimation(m_dimension * tile.column() + tile.row(), RIGHT);
-            } else {
-                emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), RIGHT);
-                emit startAnimation(m_dimension * tile.column() + tile.row(), LEFT);
-            }
-        } else if (m_selectedTileIndex.column() == tile.column()) {
-            if (m_selectedTileIndex.row() - tile.row() == 1) {
-                emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), UP);
-                emit startAnimation(m_dimension * tile.column() + tile.row(), DOWN);
-            } else {
-                emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), DOWN);
-                emit startAnimation(m_dimension * tile.column() + tile.row(), UP);
-            }
+        directAnimation(tile);
+
+        bool isPopped = popTiles(tile) | popTiles(m_selectedTileIndex);
+
+        if (!isPopped) {
+            std::swap(m_data[tile.row()][tile.column()], m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()]);
         }
 
-        popTiles(tile);
-        popTiles(m_selectedTileIndex);
-        fillEmpty();
+        setSteps(steps() + 1);
+        if (steps() > stepsToLose())
+        {
+            m_isWon = false;
+            emit finished();
+        }
 
         m_selectedTileIndex = QModelIndex();
-
     } else {
         m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(false);
         emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
@@ -222,6 +221,69 @@ void Board::update()
 {
     beginResetModel();
     endResetModel();
+    if (score() >= scoreToWin())
+    {
+        m_isWon = true;
+        emit finished();
+    }
+}
+
+void Board::restart()
+{
+    beginResetModel();
+    generateBoard();
+    endResetModel();
+    setSteps(0);
+    setScore(0);
+}
+
+void Board::setScore(int score)
+{
+    m_score = score;
+    emit scoreChanged();
+}
+
+void Board::setSteps(int steps)
+{
+    m_steps = steps;
+    emit stepsChanged();
+}
+
+void Board::setScoreToWin(int score)
+{
+    m_scoreToWin = score;
+    emit scoreToWinChanged();
+}
+
+void Board::setStepsToLose(int steps)
+{
+    m_stepsToLose = steps;
+    emit stepsToLoseChanged();
+}
+
+bool Board::isWon() const
+{
+    return m_isWon;
+}
+
+int Board::score() const
+{
+    return m_score;
+}
+
+int Board::steps() const
+{
+    return m_steps;
+}
+
+int Board::scoreToWin() const
+{
+    return m_scoreToWin;
+}
+
+int Board::stepsToLose() const
+{
+    return m_stepsToLose;
 }
 
 void Board::generateBoard()
@@ -231,6 +293,27 @@ void Board::generateBoard()
         for (int j = 0; j < m_dimension; ++j)
         {
             m_data[i][j] = randColor(QPoint(i, j));
+        }
+    }
+}
+
+void Board::directAnimation(const QModelIndex &tile)
+{
+    if (m_selectedTileIndex.row() == tile.row()) {
+        if (m_selectedTileIndex.column() - tile.column() == 1) {
+            emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), LEFT);
+            emit startAnimation(m_dimension * tile.column() + tile.row(), RIGHT);
+        } else {
+            emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), RIGHT);
+            emit startAnimation(m_dimension * tile.column() + tile.row(), LEFT);
+        }
+    } else if (m_selectedTileIndex.column() == tile.column()) {
+        if (m_selectedTileIndex.row() - tile.row() == 1) {
+            emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), UP);
+            emit startAnimation(m_dimension * tile.column() + tile.row(), DOWN);
+        } else {
+            emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), DOWN);
+            emit startAnimation(m_dimension * tile.column() + tile.row(), UP);
         }
     }
 }
