@@ -1,58 +1,43 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include <QAbstractListModel>
 #include <QAbstractTableModel>
 #include <QColor>
 #include <QPoint>
+#include <QDebug>
+#include <QStack>
+
+#include <utility>
 
 #include "tile.h"
 
-class Board : public QAbstractTableModel
+class Board : public QAbstractListModel
 {
     Q_OBJECT
 
-    using Colors = QVector<QColor>;
     using Matrix = QVector<QVector<Tile>>;
-    using Directions = QVector<QPoint>;
-
-
-    enum Direction {
-        UP,
-        RIGHT,
-        DOWN,
-        LEFT,
-    };
+    using Colors = QVector<QColor>;
 
 public:
     Board();
 
-
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
-    Q_INVOKABLE void moveTile(const QModelIndex& tile);
-    Q_INVOKABLE void update();
-
-signals:
-    void startAnimation(int index, int direction);
+    Q_INVOKABLE void move(int inx);
 
 private:
     void generateBoard();
-    bool isMovable(const QModelIndex& index);
-    bool popTiles(const QModelIndex& index);
-    bool isValid(QPoint& p);
-    void shift(QVector<QPoint>& poppedTiles);
-    void fillEmpty();
     QColor randColor(const QPoint& p) const;
 
 private:
     const int m_dimension;
     Matrix m_data;
     Colors m_colors;
-    QModelIndex m_selectedTileIndex;
-    const Directions m_directions;
+    QPoint m_selectedItem;
 };
 
 #endif // BOARD_H

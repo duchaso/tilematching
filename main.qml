@@ -10,100 +10,74 @@ Window {
     visible: true
     title: qsTr("Hello World")
 
-    TableView {
-        id: tableView
+    property int it: -1
 
-        property int spacing: 2
+    GridView {
+        id: gridView
 
         anchors.fill: parent
-        columnSpacing: spacing
-        rowSpacing: spacing
-        columnWidthProvider: function (column) { return root.width / boardModel.columnCount() - spacing }
-        rowHeightProvider: function (row) { return root.height / boardModel.rowCount() - spacing }
-        clip: true
-        interactive: false
+        cellHeight: root.height / 6
+        cellWidth: root.width / 6
 
         model: Board {
             id: boardModel
         }
 
         delegate: Rectangle {
-            implicitWidth: 100
-            implicitHeight: 100
-            radius: 100
-            color: colour
+            property bool ready: false
+            height: gridView.cellHeight
+            width: gridView.cellWidth
+            color: model.color
 
-
-            NumberAnimation on x {
-                id: movingX
-
-                property int shift: width + tableView.spacing
-                to: x
-                alwaysRunToEnd: true
-                running: false
-                duration: 1000
-                onFinished: boardModel.update();
-            }
-            NumberAnimation on y {
-                id: movingY
-
-                property int shift: height + tableView.spacing
-                to: y
-                alwaysRunToEnd: true
-                running: false
-                duration: 1000
-                onFinished: boardModel.update();
+            Text {
+                anchors.centerIn: parent
+                text: index
             }
 
-
-            function move(inx, dir) {
-                if (index === inx) {
-                    switch (dir) {
-                    case 0:
-                        movingY.from = y + (-movingY.shift);
-                        movingY.start();
-                        break;
-                    case 1:
-                        movingX.from = x + movingX.shift;
-                        movingX.start();
-                        break;
-                    case 2:
-                        movingY.from = y + movingY.shift;
-                        movingY.start();
-                        break;
-                    case 3:
-                        movingX.from = x + (-movingX.shift);
-                        movingX.start();
-                        break;
-                    }
-                }
+            Component.onCompleted: {
+                ready = true;
             }
 
-            Connections {
-                target: boardModel
-                function onStartAnimation(inx, dir) {
-                    move(inx, dir);
-                }
+            onXChanged: {
+                blinking.stop();
+            }
+            onYChanged: {
+                blinking.stop();
+            }
+
+            Behavior on x {
+                NumberAnimation { duration: 1000 }
+            }
+            Behavior on y {
+                NumberAnimation { duration: 1000 }
             }
 
             ColorAnimation on color {
                 id: blinking
 
+                running: false
+                from: "white"
+                to: color
+                duration: 2000
+                alwaysRunToEnd: true
                 loops: Animation.Infinite
-                running: active
-                from: colour
-                to: "pink"
-                duration: 1500
             }
 
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    boardModel.moveTile(boardModel.index(row, column));
+                    if (root.it == -1)
+                    {
+                        root.it = index;
+                        blinking.start();
+                    } else {
+                        [gridView.itemAtIndex(root.it).y, parent.y] = [parent.y, gridView.itemAtIndex(root.it).y];
+                        [gridView.itemAtIndex(root.it).x, parent.x] = [parent.x, gridView.itemAtIndex(root.it).x];
+                        root.it = -1;
+                    }
                 }
             }
         }
-
     }
 }
 

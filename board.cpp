@@ -9,31 +9,29 @@
 
 Board::Board() :
     m_dimension{6}
-  , m_data{Matrix(m_dimension, QVector<Tile>(m_dimension))}
-  , m_selectedTileIndex{QModelIndex()}
+  ,	m_data{Matrix(m_dimension, QVector<Tile>(m_dimension))}
   , m_colors{"red", "blue", "yellow", "grey", "green"}
-  , m_directions{{-1,0}, {0,1}, {1,0}, {0,-1}}
+  , m_selectedItem{-1, -1}
 {
     generateBoard();
 }
 
 int Board::rowCount(const QModelIndex &parent) const
 {
-    return m_dimension;
-}
-
-int Board::columnCount(const QModelIndex &parent) const
-{
-    return m_dimension;
+    return m_dimension*m_dimension;
 }
 
 QVariant Board::data(const QModelIndex &index, int role) const
 {
     switch (role) {
     case Qt::DecorationRole:
-        return m_data[index.row()][index.column()].color();
+        return m_data[index.row()/m_dimension][index.row()%m_dimension].color();
     case Qt::UserRole:
-        return m_data[index.row()][index.column()].isActive();
+        return m_data[index.row()/m_dimension][index.row()%m_dimension].isActive();
+    case Qt::UserRole + 1:
+        return m_data[index.row()/m_dimension][index.row()%m_dimension].pos().x();
+    case Qt::UserRole + 2:
+        return m_data[index.row()/m_dimension][index.row()%m_dimension].pos().y();
     default:
         break;
     }
@@ -43,114 +41,63 @@ QVariant Board::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> Board::roleNames() const
 {
-    return { {Qt::DecorationRole, "colour"}, {Qt::UserRole, "active"} };
+    return { {Qt::DecorationRole, "color"}, {Qt::UserRole, "active"}, {Qt::UserRole + 1, "x"}, {Qt::UserRole + 2, "y"} };
 }
 
-bool Board::isMovable(const QModelIndex &index)
+bool Board::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    return ( (index.row() == m_selectedTileIndex.row() &&
-              std::abs(index.column() - m_selectedTileIndex.column()) == 1) ||
-             (index.column() == m_selectedTileIndex.column() &&
-              std::abs(index.row() - m_selectedTileIndex.row()) == 1) ) ? true : false;
+    int n = value.toInt();
+    QPoint p = m_data[index.row()/m_dimension][index.row()%m_dimension].pos();
+    switch (role) {
+    case Qt::UserRole + 1:
+        p.setX(n);
+        m_data[index.row()/m_dimension][index.row()%m_dimension].setPos(p);
+        return true;
+    case Qt::UserRole + 2:
+        p.setY(n);
+        m_data[index.row()/m_dimension][index.row()%m_dimension].setPos(p);
+        return true;
+    default:
+        return false;
+    }
 }
 
-bool Board::popTiles(const QModelIndex& index)
+void Board::move(int inx)
 {
-    QPoint current(index.row(), index.column());
-    QVector<QPoint> forPopping{current};
-
-    for (const auto& direction : m_directions)
+    if (m_selectedItem == QPoint{-1, -1})
     {
-        for (auto forCheck = current + direction;
-             isValid(forCheck) && m_data[current.x()][current.y()] == m_data[forCheck.x()][forCheck.y()];
-             forCheck += direction)
-        {
-            forPopping.append(forCheck);
-        }
+        m_selectedItem = {inx / m_dimension, inx % m_dimension};
+    } else {
+        QPoint p(inx / m_dimension, inx % m_dimension);
+        std::swap(m_data[m_selectedItem.x()][m_selectedItem.y()], m_data[p.x()][p.y()]);
+        emit dataChanged(this->index(m_selectedItem.x() * m_dimension + m_selectedItem.y()), this->index(m_selectedItem.x() * m_dimension + m_selectedItem.y()));
+        emit dataChanged(this->index(p.x() * m_dimension + p.y()), this->index(p.x() * m_dimension + p.y()));
+        m_selectedItem = {-1, -1};
     }
-
-    if (forPopping.size() > 2) {
-        for (auto& ball : forPopping)
-        {
-            m_data[ball.x()][ball.y()] = Qt::transparent;
-        }
-        shift(forPopping);
-    }
-    return (forPopping.size() > 2 ) ? true : false;
 }
 
-bool Board::isValid(QPoint &p)
+void Board::generateBoard()
 {
-    return ( (p.x() < 0)
-              || (p.y() < 0)
-              || (p.x() > m_dimension - 1)
-              || (p.y() > m_dimension - 1) ? false : true );
-}
+    static bool isCalled = false;
 
-void Board::shift(QVector<QPoint> &poppedTiles)
-{
-    for (auto cur : poppedTiles) {
-        for (; isValid(cur) && m_data[cur.x()][cur.y()].color() == Qt::transparent; cur += m_directions[UP]);
-        for (; isValid(cur); cur += m_directions[UP])
+    if (!isCalled)
+    {
+        for (int i = 0; i < m_dimension; ++i)
         {
-            for (auto next = cur + m_directions[DOWN];
-                 isValid(next) && m_data[next.x()][next.y()].color() == Qt::transparent;
-                 next += m_directions[DOWN])
+            for (int j = 0; j < m_dimension; ++j)
             {
-                auto prev = next + m_directions[UP];
-                std::swap(m_data[next.x()][next.y()], m_data[prev.x()][prev.y()]);
+                m_data[i][j] = Tile(randColor(QPoint(i, j)), QPoint(i,j));
             }
         }
-    }
-}
-
-void Board::fillEmpty()
-{
-    QPoint current;
-    QVector<QPoint> toFill;
-    QVector<QVector<bool>> visited(m_dimension, QVector<bool>(m_dimension, false));
-    QQueue<QPoint> queue;
-
-    bool found = false;
-    for (int i = 0; !found && i < m_data.size(); ++i)
-    {
-        for (int j = 0; j < m_data.first().size(); ++j)
+        isCalled = true;
+    } else {
+        for (int i = 0; i < m_dimension; ++i)
         {
-            if (m_data[i][j].color() == Qt::transparent)
+            for (int j = 0; j < m_dimension; ++j)
             {
-                found = true;
-                current = {i, j};
-                break;
+                m_data[i][j] = randColor(QPoint(i, j));
             }
         }
-    }
-
-    visited[current.x()][current.y()] = true;
-    queue.enqueue(current);
-    toFill.append(current);
-
-    while (!queue.empty())
-    {
-        current = queue.head();
-        queue.dequeue();
-
-        for (const auto& direction : m_directions)
-        {
-            auto check = current + direction;
-            if (	isValid(check)
-                    && !visited[check.x()][check.y()]
-                    && m_data[check.x()][check.y()].color() == Qt::transparent)
-            {
-                visited[check.x()][check.y()] = true;
-                toFill.append(check);
-                queue.enqueue(check);
-            }
-        }
-    }
-
-    for (const auto& cur : toFill)
-    {
-        m_data[cur.x()][cur.y()] = randColor(cur);
     }
 }
 
@@ -169,68 +116,4 @@ QColor Board::randColor(const QPoint &p) const
     availableColors.removeOne(prevLeft);
     std::uniform_int_distribution<int> uniform_dist(0, availableColors.size() - 1);
     return availableColors[uniform_dist(e)];
-}
-
-void Board::moveTile(const QModelIndex &tile)
-{
-    if (!m_selectedTileIndex.isValid())
-    {
-        m_selectedTileIndex = tile;
-        m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(true);
-        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
-    } else if (isMovable(tile)) {
-        m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(false);
-        std::swap(m_data[tile.row()][tile.column()], m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()]);
-
-        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
-        emit dataChanged(tile, tile);
-
-        if (m_selectedTileIndex.row() == tile.row()) {
-            if (m_selectedTileIndex.column() - tile.column() == 1) {
-                emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), LEFT);
-                emit startAnimation(m_dimension * tile.column() + tile.row(), RIGHT);
-            } else {
-                emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), RIGHT);
-                emit startAnimation(m_dimension * tile.column() + tile.row(), LEFT);
-            }
-        } else if (m_selectedTileIndex.column() == tile.column()) {
-            if (m_selectedTileIndex.row() - tile.row() == 1) {
-                emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), UP);
-                emit startAnimation(m_dimension * tile.column() + tile.row(), DOWN);
-            } else {
-                emit startAnimation(m_dimension * m_selectedTileIndex.column() + m_selectedTileIndex.row(), DOWN);
-                emit startAnimation(m_dimension * tile.column() + tile.row(), UP);
-            }
-        }
-
-        popTiles(tile);
-        popTiles(m_selectedTileIndex);
-        fillEmpty();
-
-        m_selectedTileIndex = QModelIndex();
-
-    } else {
-        m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(false);
-        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
-        m_selectedTileIndex = tile;
-        m_data[m_selectedTileIndex.row()][m_selectedTileIndex.column()].setActive(true);
-        emit dataChanged(m_selectedTileIndex, m_selectedTileIndex);
-    }
-}
-
-void Board::update()
-{
-    beginResetModel();
-    endResetModel();
-}
-
-void Board::generateBoard()
-{
-    for (int i = 0; i < m_dimension; ++i)
-    {
-        for (int j = 0; j < m_dimension; ++j)
-        {
-            m_data[i][j] = randColor(QPoint(i, j));
-        }
-    }
 }
