@@ -9,7 +9,7 @@ class Tile
 {
 public:
     Tile();
-    Tile(const QColor& color, const QPoint& pos);
+    Tile(const QColor& color, const int pos);
     Tile(const Tile& other);
     Tile(Tile&& other);
 
@@ -23,13 +23,13 @@ public:
     void setActive(bool state);
     bool isActive() const;
 
-    void setPos(const QPoint& pos);
-    QPoint pos() const;
+    void setPos(const int pos);
+    int pos() const;
 
     static void swap(Tile& first, Tile& second);
 private:
     QColor m_color;
-    QPoint m_pos;
+    int m_pos;
     bool m_active;
 };
 

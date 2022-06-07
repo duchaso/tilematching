@@ -25,11 +25,11 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
-    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
-    Q_INVOKABLE void move(int inx);
+    Q_INVOKABLE bool move(int inx1, int inx2);
 
 private:
+    bool isMovable(int inx1, int inx2) const;
     void generateBoard();
     QColor randColor(const QPoint& p) const;
 

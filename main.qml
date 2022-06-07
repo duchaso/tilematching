@@ -25,6 +25,7 @@ Window {
 
         delegate: Rectangle {
             property bool ready: false
+//            property alias blink: blinking.running
             height: gridView.cellHeight
             width: gridView.cellWidth
             color: model.color
@@ -71,8 +72,10 @@ Window {
                         root.it = index;
                         blinking.start();
                     } else {
-                        [gridView.itemAtIndex(root.it).y, parent.y] = [parent.y, gridView.itemAtIndex(root.it).y];
-                        [gridView.itemAtIndex(root.it).x, parent.x] = [parent.x, gridView.itemAtIndex(root.it).x];
+                        if (boardModel.move(it, index)) {
+                            [parent.x, gridView.itemAtIndex(root.it).x] = [gridView.itemAtIndex(root.it).x, parent.x];
+                            [parent.y, gridView.itemAtIndex(root.it).y] = [gridView.itemAtIndex(root.it).y, parent.y];
+                        }
                         root.it = -1;
                     }
                 }
@@ -80,4 +83,5 @@ Window {
         }
     }
 }
+
 

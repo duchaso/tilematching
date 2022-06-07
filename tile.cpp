@@ -2,12 +2,12 @@
 
 Tile::Tile() :
     m_color(Qt::transparent)
-  , m_pos(-1, -1)
+  , m_pos(-1)
   , m_active(false)
 {
 }
 
-Tile::Tile(const QColor &color, const QPoint& pos) :
+Tile::Tile(const QColor &color, const int pos) :
     m_color(color)
   , m_pos(pos)
   , m_active(false)
@@ -27,7 +27,7 @@ Tile::Tile(Tile &&other) :
   , m_active(other.m_active)
 {
     other.m_color = Qt::transparent;
-    other.m_pos = {-1, -1};
+    other.m_pos = {-1};
     other.m_active = false;
 }
 
@@ -49,7 +49,7 @@ void Tile::operator=(Tile &&other)
         m_active = other.m_active;
 
         other.m_color = Qt::transparent;
-        other.m_pos = {-1, -1};
+        other.m_pos = {-1};
         other.m_active = false;
     }
 }
@@ -74,19 +74,18 @@ bool Tile::isActive() const
     return m_active;
 }
 
-void Tile::setPos(const QPoint &pos)
+void Tile::setPos(const int pos)
 {
     m_pos = pos;
 }
 
-QPoint Tile::pos() const
+int Tile::pos() const
 {
     return m_pos;
 }
 
 void Tile::swap(Tile &first, Tile &second)
 {
-
     auto tmp = first.pos();
     first.setPos(second.pos());
     second.setPos(tmp);
