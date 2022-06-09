@@ -12,146 +12,82 @@ Window {
     visible: true
     title: qsTr("Hello World")
 
-    TableView {
-        id: tableView
+    property int it: -1
 
-        property int spacing: 2
+    GridView {
+        id: gridView
 
         anchors.fill: parent
-        columnSpacing: spacing
-        rowSpacing: spacing
-        columnWidthProvider: function (column) { return root.width / boardModel.columnCount() - spacing }
-        rowHeightProvider: function (row) { return root.height / boardModel.rowCount() - spacing - 25}
-        clip: true
-        interactive: false
+        cellHeight: root.height / 6
+        cellWidth: root.width / 6
 
         model: Board {
             id: boardModel
         }
 
         delegate: Rectangle {
-            implicitWidth: 100
-            implicitHeight: 100
-            radius: 100
-            color: colour
+            property bool ready: false
+            property alias blink: blinking.running
+            height: gridView.cellHeight
+            width: gridView.cellWidth
+            color: model.color
 
-
-            NumberAnimation on x {
-                id: movingX
-
-                property int shift: width + tableView.spacing
-                to: x
-                alwaysRunToEnd: true
-                running: false
-                duration: 1500
-                onFinished: boardModel.update();
-            }
-            NumberAnimation on y {
-                id: movingY
-
-                property int shift: height + tableView.spacing
-                to: y
-                alwaysRunToEnd: true
-                running: false
-                duration: 1500
-                onFinished: boardModel.update();
+            Text {
+                anchors.centerIn: parent
+                text: index
             }
 
-
-            function move(inx, dir) {
-                if (index === inx) {
-                    switch (dir) {
-                    case 0:
-                        movingY.from = y + (-movingY.shift);
-                        movingY.start();
-                        break;
-                    case 1:
-                        movingX.from = x + movingX.shift;
-                        movingX.start();
-                        break;
-                    case 2:
-                        movingY.from = y + movingY.shift;
-                        movingY.start();
-                        break;
-                    case 3:
-                        movingX.from = x + (-movingX.shift);
-                        movingX.start();
-                        break;
-                    }
-                }
+            Component.onCompleted: {
+                ready = true;
             }
 
-            Connections {
-                target: boardModel
-                function onStartAnimation(inx, dir) {
-                    move(inx, dir);
-                }
+            onXChanged: {
+                blinking.stop();
+            }
+            onYChanged: {
+                blinking.stop();
+            }
+
+            Behavior on x {
+                NumberAnimation { duration: 1000 }
+            }
+            Behavior on y {
+                NumberAnimation { duration: 1000 }
             }
 
             ColorAnimation on color {
                 id: blinking
 
+                running: false
+                from: "white"
+                to: color
+                duration: 2000
+                alwaysRunToEnd: true
                 loops: Animation.Infinite
-                running: active
-                from: colour
-                to: "pink"
-                duration: 1500
             }
 
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    boardModel.moveTile(boardModel.index(row, column));
+                    if (root.it == -1)
+                    {
+                        root.it = index;
+                        blinking.start();
+                    } else {
+                        if (boardModel.move(it, index)) {
+                            [parent.x, gridView.itemAtIndex(root.it).x] = [gridView.itemAtIndex(root.it).x, parent.x];
+                            [parent.y, gridView.itemAtIndex(root.it).y] = [gridView.itemAtIndex(root.it).y, parent.y];
+                            root.it = -1;
+                        } else {
+                            gridView.itemAtIndex(root.it).blink = false;
+                            root.it = index;
+                            blinking.start();
+                        }
+                    }
                 }
             }
         }
     }
-
-    RowLayout {
-        height: 150
-        width: root.width
-        x: 0
-        y: root.height - height
-
-        Text {
-            id: scoreWidget
-
-            Layout.fillWidth: true
-            horizontalAlignment: Text.AlignHCenter
-            font.pixelSize: 50
-            text: "Score: " + boardModel.score + "/" + boardModel.scoreToWin
-        }
-        Text {
-            id: stepsWidget
-
-            Layout.fillWidth: true
-            horizontalAlignment: Text.AlignHCenter
-            font.pixelSize: 50
-            text: "Steps: " + boardModel.steps + "/" + boardModel.stepsToLose
-        }
-    }
-
-    MessageDialog {
-        id: winDialog
-
-        standardButtons: StandardButton.Ok | StandardButton.Reset
-
-        onAccepted: Qt.quit();
-        onReset: boardModel.restart();
-    }
-    Connections {
-        target: boardModel
-        function onFinished() {
-            if (boardModel.isWon)
-            {
-                winDialog.title = "CONGRATS!";
-                winDialog.text = "You won! Try again or quit";
-            } else {
-                winDialog.title = ":(";
-                winDialog.text = "Try again or quit";
-            }
-            winDialog.open();
-        }
-    }
 }
+
 
