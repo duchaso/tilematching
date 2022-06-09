@@ -1,12 +1,14 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
+import QtQuick.Layouts 1.15
+import QtQuick.Dialogs 1.3
 import board 1.0
 
 Window {
     id: root
 
     width: 640
-    height: 640
+    height: 790
     visible: true
     title: qsTr("Hello World")
 

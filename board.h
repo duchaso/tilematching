@@ -15,6 +15,11 @@
 class Board : public QAbstractListModel
 {
     Q_OBJECT
+    Q_PROPERTY(int score READ score WRITE setScore NOTIFY scoreChanged)
+    Q_PROPERTY(int steps READ steps WRITE setSteps NOTIFY stepsChanged)
+    Q_PROPERTY(int scoreToWin READ scoreToWin WRITE setScoreToWin NOTIFY scoreToWinChanged)
+    Q_PROPERTY(int stepsToLose READ stepsToLose WRITE setStepsToLose NOTIFY stepsToLoseChanged)
+    Q_PROPERTY(bool isWon READ isWon NOTIFY isWonChanged)
 
     using Matrix = QVector<QVector<Tile>>;
     using Colors = QVector<QColor>;
@@ -31,6 +36,7 @@ public:
 private:
     bool isMovable(int inx1, int inx2) const;
     void generateBoard();
+
     QColor randColor(const QPoint& p) const;
 
 private:
