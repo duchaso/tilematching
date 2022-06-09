@@ -14,7 +14,6 @@ public:
     Tile(Tile&& other);
 
     bool operator==(const Tile& other) const;
-    void operator=(const QColor& color);
     void operator=(Tile&& other);
 
     void setColor(const QColor& color);
@@ -26,7 +25,8 @@ public:
     void setPos(const int pos);
     int pos() const;
 
-    static void swap(Tile& first, Tile& second);
+    static void swapPosition(Tile& first, Tile& second);
+
 private:
     QColor m_color;
     int m_pos;
