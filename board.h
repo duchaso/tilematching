@@ -18,6 +18,14 @@ class Board : public QAbstractListModel
 
     using Matrix = QVector<QVector<Tile>>;
     using Colors = QVector<QColor>;
+    using Directions = QVector<QPoint>;
+
+    enum Direction {
+        UP,
+        RIGHT,
+        DOWN,
+        LEFT,
+    };
 
 public:
     Board();
@@ -27,9 +35,12 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE bool move(int inx1, int inx2);
+    Q_INVOKABLE bool pop();
 
 private:
     bool isMovable(int inx1, int inx2) const;
+    bool isValid(const QPoint& p);
+    bool popTiles(QPoint p);
     void generateBoard();
     QColor randColor(const QPoint& p) const;
 
@@ -37,7 +48,9 @@ private:
     const int m_dimension;
     Matrix m_data;
     Colors m_colors;
-    QPoint m_selectedItem;
+    QPoint m_firstMovedItem;
+    QPoint m_secondMovedItem;
+    const Directions m_directions;
 };
 
 #endif // BOARD_H

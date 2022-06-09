@@ -11,7 +11,9 @@ Board::Board() :
     m_dimension{6}
   ,	m_data{Matrix(m_dimension, QVector<Tile>(m_dimension))}
   , m_colors{"red", "blue", "yellow", "grey", "green"}
-  , m_selectedItem{-1, -1}
+  , m_directions{{-1,0}, {0,1}, {1,0}, {0,-1}}
+  , m_firstMovedItem{-1, -1}
+  , m_secondMovedItem{-1, -1}
 {
     generateBoard();
 }
@@ -44,29 +46,23 @@ QHash<int, QByteArray> Board::roleNames() const
 
 bool Board::move(int inx1, int inx2)
 {
-//    if (m_selectedItem == QPoint{-1, -1})
-//    {
-//        m_selectedItem = {inx / m_dimension, inx % m_dimension};
-//    } else {
-//        QPoint p(inx / m_dimension, inx % m_dimension);
-//        std::swap(m_data[m_selectedItem.x()][m_selectedItem.y()], m_data[p.x()][p.y()]);
-//        Tile::swap(m_data[m_selectedItem.x()][m_selectedItem.y()], m_data[p.x()][p.y()]);
-//        emit dataChanged(this->index(m_selectedItem.x() * m_dimension + m_selectedItem.y()), this->index(m_selectedItem.x() * m_dimension + m_selectedItem.y()));
-//        emit dataChanged(this->index(p.x() * m_dimension + p.y()), this->index(p.x() * m_dimension + p.y()));
-//        m_selectedItem = {-1, -1};
-    //    }
     if (!isMovable(inx1, inx2))
     {
         return false;
     } else {
-        QPoint p1(inx1 / m_dimension, inx1 % m_dimension);
-        QPoint p2(inx2 / m_dimension, inx2 % m_dimension);
-        std::swap(m_data[p1.x()][p1.y()], m_data[p2.x()][p2.y()]);
-        Tile::swap(m_data[p1.x()][p1.y()], m_data[p2.x()][p2.y()]);
-        //    emit dataChanged(this->index(p1.x() * m_dimension + p1.y()), this->index(p1.x() * m_dimension + p1.y()));
-        //    emit dataChanged(this->index(p2.x() * m_dimension + p2.y()), this->index(p2.x() * m_dimension + p2.y()));
+        m_firstMovedItem = {inx1 / m_dimension, inx1 % m_dimension};
+        m_secondMovedItem = {inx2 / m_dimension, inx2 % m_dimension};
+        std::swap(m_data[m_firstMovedItem.x()][m_firstMovedItem.y()], m_data[m_secondMovedItem.x()][m_secondMovedItem.y()]);
+        Tile::swapPosition(m_data[m_firstMovedItem.x()][m_firstMovedItem.y()], m_data[m_secondMovedItem.x()][m_secondMovedItem.y()]);
+//        emit dataChanged(this->index(m_firstMovedItem.x() * m_dimension + m_firstMovedItem.y()), this->index(m_firstMovedItem.x() * m_dimension + m_firstMovedItem.y()));
+//        emit dataChanged(this->index(m_secondMovedItem.x() * m_dimension + m_secondMovedItem.y()), this->index(m_secondMovedItem.x() * m_dimension + m_secondMovedItem.y()));
         return true;
     }
+}
+
+bool Board::pop()
+{
+    return popTiles(m_firstMovedItem) | popTiles(m_secondMovedItem);
 }
 
 bool Board::isMovable(int inx1, int inx2) const
@@ -75,6 +71,40 @@ bool Board::isMovable(int inx1, int inx2) const
              inx1 - m_dimension == inx2 ||
              inx1 + 1			== inx2 ||
              inx1 - 1			== inx2	) ? true : false;
+}
+
+bool Board::isValid(const QPoint &p)
+{
+    return ( (p.x() < 0)
+              || (p.y() < 0)
+              || (p.x() > m_dimension - 1)
+              || (p.y() > m_dimension - 1) ? false : true );
+}
+
+bool Board::popTiles(QPoint p)
+{
+    QVector<QPoint> forPopping{p};
+
+    for (const auto& direction : m_directions)
+    {
+        for (auto forCheck = p + direction;
+             isValid(forCheck) && m_data[p.x()][p.y()] == m_data[forCheck.x()][forCheck.y()];
+             forCheck += direction)
+        {
+            forPopping.append(forCheck);
+        }
+    }
+
+    if (forPopping.size() > 2) {
+        beginResetModel();
+        for (auto& ball : forPopping)
+        {
+            m_data[ball.x()][ball.y()].setColor(Qt::transparent);
+//            emit dataChanged(this->index(ball.x() * m_dimension + ball.y()), this->index(ball.x() * m_dimension + ball.y()), {Qt::DecorationRole});
+        }
+        endResetModel();
+    }
+    return (forPopping.size() > 2 ) ? true : false;
 }
 
 void Board::generateBoard()
@@ -96,7 +126,7 @@ void Board::generateBoard()
         {
             for (int j = 0; j < m_dimension; ++j)
             {
-                m_data[i][j] = randColor(QPoint(i, j));
+                m_data[i][j].setColor(randColor(QPoint(i, j)));
             }
         }
     }

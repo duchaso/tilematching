@@ -36,10 +36,6 @@ bool Tile::operator==(const Tile &other) const
     return m_color == other.m_color ? true : false;
 }
 
-void Tile::operator=(const QColor &color)
-{
-    m_color = color;
-}
 void Tile::operator=(Tile &&other)
 {
     if (this != &other)
@@ -84,7 +80,7 @@ int Tile::pos() const
     return m_pos;
 }
 
-void Tile::swap(Tile &first, Tile &second)
+void Tile::swapPosition(Tile &first, Tile &second)
 {
     auto tmp = first.pos();
     first.setPos(second.pos());
