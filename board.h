@@ -41,6 +41,8 @@ public:
 
     Q_INVOKABLE bool move(int inx1, int inx2);
     Q_INVOKABLE bool pop();
+    Q_INVOKABLE void shift();
+    Q_INVOKABLE void fill();
 
 private:
     bool isMovable(int inx1, int inx2) const;

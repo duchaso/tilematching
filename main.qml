@@ -15,6 +15,7 @@ Window {
     property int it: -1
     property int it2: -1
     property int countSwapAnimation: 0
+    property bool shifted: false
 
     onCountSwapAnimationChanged: {
         if (countSwapAnimation == 0)
@@ -23,7 +24,18 @@ Window {
             {
                 [gridView.itemAtIndex(root.it2).x, gridView.itemAtIndex(root.it).x] = [gridView.itemAtIndex(root.it).x, gridView.itemAtIndex(root.it2).x];
                 [gridView.itemAtIndex(root.it2).y, gridView.itemAtIndex(root.it).y] = [gridView.itemAtIndex(root.it).y, gridView.itemAtIndex(root.it2).y];
+                boardModel.move(it, it2);
+            } else {
+                if (!shifted)
+                {
+                    boardModel.shift();
+                    root.shifted = true;
+                } else {
+                    boardModel.fill();
+                    root.shifted = false;
+                }
             }
+
             root.it = -1;
         }
     }
@@ -42,19 +54,27 @@ Window {
         delegate: Rectangle {
             property bool ready: false
             property alias blink: blinking.running
-//            property alias fromX: movingX.from
-//            property alias fromY: movingY.from
+            property int newIndex: model.index
+            property bool fallDown: model.active
             height: gridView.cellHeight
             width: gridView.cellWidth
             color: model.color
 
             Text {
                 anchors.centerIn: parent
-                text: index
+                text: model.index
             }
 
             Component.onCompleted: {
                 ready = true;
+            }
+
+            onNewIndexChanged: {
+                if (ready)
+                {
+                    x = gridView.itemAtIndex(newIndex).x;
+                    y = gridView.itemAtIndex(newIndex).y
+                }
             }
 
             onXChanged: {
@@ -64,42 +84,23 @@ Window {
                 blinking.stop();
             }
 
-//            NumberAnimation on x {
-//                id: movingX
+            onFallDownChanged: {
+                if (ready && fallDown)
+                {
+                    fallingDown.start();
+                }
+            }
 
-//                to: x
-//                alwaysRunToEnd: true
-//                running: false
-//                duration: 1500
-//                onFromChanged: {
-//                    blinking.stop();
-//                    movingX.start();
-//                }
-//                onStarted: {
-//                    root.countSwapAnimation += 1;
-//                }
-//                onFinished: {
-//                    root.countSwapAnimation -= 1;
-//                }
-//            }
-//            NumberAnimation on y {
-//                id: movingY
+            NumberAnimation on y {
+                id: fallingDown
 
-//                to: y
-//                alwaysRunToEnd: true
-//                running: false
-//                duration: 1500
-//                onFromChanged: {
-//                    blinking.stop();
-//                    movingY.start();
-//                }
-//                onStarted: {
-//                    root.countSwapAnimation += 1;
-//                }
-//                onFinished: {
-//                    root.countSwapAnimation -= 1;
-//                }
-//            }
+                from: y - (height * (index % 6))
+                to: y
+                running: false
+                duration: 1500
+                alwaysRunToEnd: true
+            }
+
             Behavior on x {
                 NumberAnimation {
                     duration: 1500
@@ -126,9 +127,9 @@ Window {
                     }
                 }
             }
-//            Behavior on color {
-//                ColorAnimation { duration: 1000 }
-//            }
+            Behavior on color {
+                ColorAnimation { duration: 1000 }
+            }
 
             ColorAnimation on color {
                 id: blinking
@@ -150,12 +151,6 @@ Window {
                         blinking.start();
                     } else {
                         if (boardModel.move(root.it, index)) {
-                            [parent.x, gridView.itemAtIndex(root.it).x] = [gridView.itemAtIndex(root.it).x, parent.x];
-                            [parent.y, gridView.itemAtIndex(root.it).y] = [gridView.itemAtIndex(root.it).y, parent.y];
-//                            gridView.itemAtIndex(root.it).fromX = gridView.itemAtIndex(root.it2).x;
-//                            gridView.itemAtIndex(root.it).fromY = gridView.itemAtIndex(root.it2).y;
-//                            gridView.itemAtIndex(root.it2).fromX = gridView.itemAtIndex(root.it).x;
-//                            gridView.itemAtIndex(root.it2).fromY = gridView.itemAtIndex(root.it).y;
                             root.it2 = index;
                         } else {
                             gridView.itemAtIndex(root.it).blink = false;
