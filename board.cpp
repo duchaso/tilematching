@@ -12,15 +12,18 @@ Board::Board() :
   ,	m_data{Matrix(m_dimension, QVector<Tile>(m_dimension))}
   , m_colors{"red", "blue", "yellow", "grey", "green"}
   , m_directions{{-1,0}, {0,1}, {1,0}, {0,-1}}
-  , m_firstMovedItem{-1, -1}
-  , m_secondMovedItem{-1, -1}
+  , m_isWon{false}
+  , m_score{0}
+  , m_steps{0}
+  , m_scoreToWin{10}
+  , m_stepsToLose{3}
 {
     generateBoard();
 }
 
 int Board::rowCount(const QModelIndex &parent) const
 {
-    return m_dimension*m_dimension;
+    return m_dimension * m_dimension;
 }
 
 QVariant Board::data(const QModelIndex &index, int role) const
@@ -50,23 +53,30 @@ bool Board::move(int inx1, int inx2)
     {
         return false;
     } else {
-        m_firstMovedItem = {inx1 / m_dimension, inx1 % m_dimension};
-        m_secondMovedItem = {inx2 / m_dimension, inx2 % m_dimension};
+        QPoint m_firstMovedItem = QPoint{inx1 / m_dimension, inx1 % m_dimension};
+        QPoint m_secondMovedItem = QPoint{inx2 / m_dimension, inx2 % m_dimension};
         Tile::swapPosition(m_data[m_firstMovedItem.x()][m_firstMovedItem.y()], m_data[m_secondMovedItem.x()][m_secondMovedItem.y()]);
-        emit dataChanged(this->index(m_firstMovedItem.x() * m_dimension + m_firstMovedItem.y()), this->index(m_firstMovedItem.x() * m_dimension + m_firstMovedItem.y()), {Qt::UserRole + 1});
-        emit dataChanged(this->index(m_secondMovedItem.x() * m_dimension + m_secondMovedItem.y()), this->index(m_secondMovedItem.x() * m_dimension + m_secondMovedItem.y()), {Qt::UserRole + 1});
+        emit dataChanged(this->index(m_firstMovedItem.x() * m_dimension + m_firstMovedItem.y()),
+                         this->index(m_firstMovedItem.x() * m_dimension + m_firstMovedItem.y()),
+                         {Qt::UserRole + 1});
+        emit dataChanged(this->index(m_secondMovedItem.x() * m_dimension + m_secondMovedItem.y()),
+                         this->index(m_secondMovedItem.x() * m_dimension + m_secondMovedItem.y()),
+                         {Qt::UserRole + 1});
         std::swap(m_data[m_firstMovedItem.x()][m_firstMovedItem.y()], m_data[m_secondMovedItem.x()][m_secondMovedItem.y()]);
         return true;
     }
 }
 
-bool Board::pop()
+bool Board::pop(int inx1, int inx2)
 {
+    QPoint m_firstMovedItem = QPoint{inx1 / m_dimension, inx1 % m_dimension};
+    QPoint m_secondMovedItem = QPoint{inx2 / m_dimension, inx2 % m_dimension};
     return popTiles(m_firstMovedItem) | popTiles(m_secondMovedItem);
 }
 
-void Board::shift()
+bool Board::shift()
 {
+    bool waitForFill = true;
     for (int i = 1; i < m_dimension; ++i)
     {
         for (int j = 0; j < m_dimension; ++j)
@@ -91,10 +101,12 @@ void Board::shift()
                                      this->index(top.x() * m_dimension + top.y()),
                                      {Qt::UserRole + 1});
                     std::swap(m_data[top.x()][top.y()], m_data[bottom.x()][bottom.y()]);
+                    waitForFill = false;
                 }
             }
         }
     }
+    return waitForFill;
 }
 
 void Board::fill()
@@ -123,6 +135,13 @@ void Board::fill()
     }
 }
 
+void Board::restart()
+{
+    generateBoard();
+    setScore(0);
+    setSteps(0);
+}
+
 bool Board::isMovable(int inx1, int inx2) const
 {
     return ( inx1 + m_dimension == inx2 ||
@@ -141,27 +160,50 @@ bool Board::isValid(const QPoint &p)
 
 bool Board::popTiles(QPoint p)
 {
-    QVector<QPoint> forPopping{p};
+    QVector<QPoint> forPoppingH{p};
+    QVector<QPoint> forPoppingV{p};
 
-    for (const auto& direction : m_directions)
+    for (int i = 0; i < m_directions.length(); i += 2)
     {
+        auto direction = m_directions[i];
         for (auto forCheck = p + direction;
              isValid(forCheck) && m_data[p.x()][p.y()] == m_data[forCheck.x()][forCheck.y()];
              forCheck += direction)
         {
-            forPopping.append(forCheck);
+            forPoppingH.append(forCheck);
+        }
+    }
+    for (int i = 1; i < m_directions.length(); i += 2)
+    {
+        auto direction = m_directions[i];
+        for (auto forCheck = p + direction;
+             isValid(forCheck) && m_data[p.x()][p.y()] == m_data[forCheck.x()][forCheck.y()];
+             forCheck += direction)
+        {
+            forPoppingV.append(forCheck);
         }
     }
 
-    if (forPopping.size() > 2) {
-        beginResetModel();
-        for (auto& ball : forPopping)
+    beginResetModel();
+    if (forPoppingH.size() > 2)
+    {
+        setScore(score() + forPoppingH.size());
+        for (auto& ball : forPoppingH)
         {
             m_data[ball.x()][ball.y()].setColor(Qt::transparent);
         }
-        endResetModel();
     }
-    return (forPopping.size() > 2 ) ? true : false;
+    if (forPoppingV.size() > 2)
+    {
+        setScore(score() + forPoppingV.size());
+        for (auto& ball : forPoppingV)
+        {
+            m_data[ball.x()][ball.y()].setColor(Qt::transparent);
+        }
+    }
+    endResetModel();
+
+    return (forPoppingH.size() > 2 || forPoppingV.size() > 2) ? true : false;
 }
 
 void Board::generateBoard()
@@ -179,6 +221,7 @@ void Board::generateBoard()
         }
         isCalled = true;
     } else {
+        beginResetModel();
         for (int i = 0; i < m_dimension; ++i)
         {
             for (int j = 0; j < m_dimension; ++j)
@@ -186,6 +229,7 @@ void Board::generateBoard()
                 m_data[i][j].setColor(randColor(QPoint(i, j)));
             }
         }
+        endResetModel();
     }
 }
 
@@ -204,4 +248,62 @@ QColor Board::randColor(const QPoint &p) const
     availableColors.removeOne(prevLeft);
     std::uniform_int_distribution<int> uniform_dist(0, availableColors.size() - 1);
     return availableColors[uniform_dist(e)];
+}
+
+void Board::setScore(int score)
+{
+    m_score = score;
+    emit scoreChanged();
+    if (m_score > m_scoreToWin)
+    {
+        m_isWon = true;
+        emit finished();
+    }
+}
+
+void Board::setSteps(int steps)
+{
+    m_steps = steps;
+    emit stepsChanged();
+    if (m_steps > m_stepsToLose)
+    {
+        emit finished();
+    }
+}
+
+void Board::setScoreToWin(int score)
+{
+    m_scoreToWin = score;
+    emit scoreToWinChanged();
+}
+
+void Board::setStepsToLose(int steps)
+{
+    m_stepsToLose = steps;
+    emit stepsToLoseChanged();
+}
+
+bool Board::isWon() const
+{
+    return m_isWon;
+}
+
+int Board::score() const
+{
+    return m_score;
+}
+
+int Board::steps() const
+{
+    return m_steps;
+}
+
+int Board::scoreToWin() const
+{
+    return m_scoreToWin;
+}
+
+int Board::stepsToLose() const
+{
+    return m_stepsToLose;
 }
