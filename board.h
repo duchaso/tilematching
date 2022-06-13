@@ -67,7 +67,6 @@ signals:
 private:
     bool isMovable(int inx1, int inx2) const;
     bool isValid(const QPoint& p);
-    bool popTiles(QPoint p);
     void generateBoard();
     QColor randColor(const QPoint& p) const;
 
