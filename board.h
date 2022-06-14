@@ -67,6 +67,7 @@ private:
     bool isValid(const QPoint& p);
     void generateBoard();
     QColor randColor(const QPoint& p) const;
+    void addForPopping(QVector<QPoint>& forPopping, int direction);
 
 private:
     const int m_dimension;

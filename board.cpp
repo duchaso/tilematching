@@ -153,6 +153,25 @@ bool Board::isValid(const QPoint &p)
               || (p.y() > m_dimension - 1) ? false : true );
 }
 
+void Board::addForPopping(QVector<QPoint>& forPopping, int direction)
+{
+    QVector<QPoint> addForPopping;
+    for (int i = direction; i < m_directions.length(); i += 2)
+    {
+        auto dir = m_directions[i];
+        for (auto forCheck = forPopping[0] + dir;
+             isValid(forCheck) && m_data[forPopping[0].x()][forPopping[0].y()] == m_data[forCheck.x()][forCheck.y()];
+             forCheck += dir)
+        {
+            addForPopping.append(forCheck);
+        }
+    }
+    if (addForPopping.size() > 1)
+    {
+        qDebug() << forPopping;
+        forPopping.append(addForPopping);
+    }
+}
 bool Board::pop(int inx1, int inx2)
 {
     setSteps(m_steps + 1);
@@ -163,42 +182,14 @@ bool Board::pop(int inx1, int inx2)
     beginResetModel();
     for (const auto& p : points)
     {
-        QVector<QPoint> forPoppingH{p};
-        QVector<QPoint> forPoppingV{p};
+        QVector<QPoint> forPopping{p};
+        addForPopping(forPopping, 0);
+        addForPopping(forPopping, 1);
 
-        for (int i = 0; i < m_directions.length(); i += 2)
+        if (forPopping.size() > 2)
         {
-            auto direction = m_directions[i];
-            for (auto forCheck = p + direction;
-                 isValid(forCheck) && m_data[p.x()][p.y()] == m_data[forCheck.x()][forCheck.y()];
-                 forCheck += direction)
-            {
-                forPoppingH.append(forCheck);
-            }
-        }
-        for (int i = 1; i < m_directions.length(); i += 2)
-        {
-            auto direction = m_directions[i];
-            for (auto forCheck = p + direction;
-                 isValid(forCheck) && m_data[p.x()][p.y()] == m_data[forCheck.x()][forCheck.y()];
-                 forCheck += direction)
-            {
-                forPoppingV.append(forCheck);
-            }
-        }
-
-        if (forPoppingH.size() > 2)
-        {
-            setScore(score() + forPoppingH.size());
-            for (auto& ball : forPoppingH)
-            {
-                m_data[ball.x()][ball.y()].setColor(Qt::transparent);
-            }
-        }
-        if (forPoppingV.size() > 2)
-        {
-            setScore(score() + forPoppingV.size());
-            for (auto& ball : forPoppingV)
+            setScore(m_score + forPopping.size());
+            for (const auto& ball : forPopping)
             {
                 m_data[ball.x()][ball.y()].setColor(Qt::transparent);
             }
@@ -212,7 +203,7 @@ bool Board::pop(int inx1, int inx2)
             m_isWon = false;
             emit finished();
         }
-        isPopped |= (forPoppingH.size() > 2 || forPoppingV.size() > 2) ? true : false;
+        isPopped |= (forPopping.size() > 2) ? true : false;
     }
     endResetModel();
 
