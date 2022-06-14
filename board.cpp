@@ -130,7 +130,9 @@ void Board::fill()
 
 void Board::restart()
 {
+    beginResetModel();
     generateBoard();
+    endResetModel();
     setScore(0);
     setSteps(0);
 }
@@ -153,6 +155,7 @@ bool Board::isValid(const QPoint &p)
 
 bool Board::pop(int inx1, int inx2)
 {
+    setSteps(m_steps + 1);
     QVector<QPoint> points = {{inx1 / m_dimension, inx1 % m_dimension},
                               {inx2 / m_dimension, inx2 % m_dimension}};
     bool isPopped = false;
@@ -200,6 +203,15 @@ bool Board::pop(int inx1, int inx2)
                 m_data[ball.x()][ball.y()].setColor(Qt::transparent);
             }
         }
+
+        if (m_score >= m_scoreToWin)
+        {
+            m_isWon = true;
+            emit finished();
+        } else if (m_steps == m_stepsToLose) {
+            m_isWon = false;
+            emit finished();
+        }
         isPopped |= (forPoppingH.size() > 2 || forPoppingV.size() > 2) ? true : false;
     }
     endResetModel();
@@ -222,7 +234,6 @@ void Board::generateBoard()
         }
         isCalled = true;
     } else {
-        beginResetModel();
         for (int i = 0; i < m_dimension; ++i)
         {
             for (int j = 0; j < m_dimension; ++j)
@@ -230,7 +241,6 @@ void Board::generateBoard()
                 m_data[i][j].setColor(randColor(QPoint(i, j)));
             }
         }
-        endResetModel();
     }
 }
 
@@ -255,33 +265,12 @@ void Board::setScore(int score)
 {
     m_score = score;
     emit scoreChanged();
-    if (m_score > m_scoreToWin)
-    {
-        m_isWon = true;
-        emit finished();
-    }
 }
 
 void Board::setSteps(int steps)
 {
     m_steps = steps;
     emit stepsChanged();
-    if (m_steps > m_stepsToLose)
-    {
-        emit finished();
-    }
-}
-
-void Board::setScoreToWin(int score)
-{
-    m_scoreToWin = score;
-    emit scoreToWinChanged();
-}
-
-void Board::setStepsToLose(int steps)
-{
-    m_stepsToLose = steps;
-    emit stepsToLoseChanged();
 }
 
 bool Board::isWon() const

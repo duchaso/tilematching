@@ -17,8 +17,8 @@ class Board : public QAbstractListModel
     Q_OBJECT
     Q_PROPERTY(int score READ score WRITE setScore NOTIFY scoreChanged)
     Q_PROPERTY(int steps READ steps WRITE setSteps NOTIFY stepsChanged)
-    Q_PROPERTY(int scoreToWin READ scoreToWin WRITE setScoreToWin NOTIFY scoreToWinChanged)
-    Q_PROPERTY(int stepsToLose READ stepsToLose WRITE setStepsToLose NOTIFY stepsToLoseChanged)
+    Q_PROPERTY(int scoreToWin READ scoreToWin NOTIFY scoreToWinChanged)
+    Q_PROPERTY(int stepsToLose READ stepsToLose NOTIFY stepsToLoseChanged)
     Q_PROPERTY(bool isWon READ isWon NOTIFY isWonChanged)
 
     using Matrix = QVector<QVector<Tile>>;
@@ -47,8 +47,6 @@ public:
 
     void setScore(int score);
     void setSteps(int steps);
-    void setScoreToWin(int score);
-    void setStepsToLose(int steps);
 
     bool isWon() const;
     int score() const;

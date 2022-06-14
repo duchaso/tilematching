@@ -10,22 +10,35 @@ Window {
     width: 480
     height: 640
     visible: true
-    title: qsTr("Hello World")
+    title: qsTr("Match3")
 
-    property int it: -1
-    property int it2: -1
+    property int firstSelectedItem: -1
+    property int secondSelectedItem: -1
     property int countSwapAnimation: 0
+    property int countFallingDownAnimation: 0
+    property bool gameFinished: false
     property bool shifted: false
     property bool filled: false
+
+    onCountFallingDownAnimationChanged: {
+        if (countFallingDownAnimation == 0)
+        {
+            if (gameFinished)
+            {
+                winDialog.open();
+                root.gameFinished = false;
+            }
+        }
+    }
 
     onCountSwapAnimationChanged: {
         if (countSwapAnimation == 0)
         {
-            if (root.it != -1 && !boardModel.pop(root.it, root.it2))
+            if (root.firstSelectedItem != -1 && !boardModel.pop(root.firstSelectedItem, root.secondSelectedItem))
             {
-                boardModel.move(it, it2);
+                boardModel.move(firstSelectedItem, secondSelectedItem);
             } else {
-                if (root.it != -1 && !shifted)
+                if (root.firstSelectedItem != -1 && !shifted)
                 {
                     root.filled = boardModel.shift();
                     root.shifted = true;
@@ -34,7 +47,7 @@ Window {
                     root.shifted = false;
                 }
             }
-            root.it = -1;
+            root.firstSelectedItem = -1;
         }
     }
 
@@ -57,107 +70,7 @@ Window {
         model: Board {
             id: boardModel
         }
-
-        delegate: Rectangle {
-            property bool ready: false
-            property alias blink: blinking.running
-            property int newIndex: model.index
-            property bool fallDown: model.active
-            height: gridView.cellHeight
-            width: gridView.cellWidth
-            radius: 100
-            color: model.color
-
-            Component.onCompleted: ready = true;
-            onXChanged: blinking.stop();
-            onYChanged: blinking.stop();
-
-            onNewIndexChanged: {
-                if (ready)
-                {
-                    x = gridView.itemAtIndex(newIndex).x;
-                    y = gridView.itemAtIndex(newIndex).y
-                }
-            }
-
-            onFallDownChanged: {
-                if (ready && fallDown)
-                {
-                    fallingDown.start();
-                }
-            }
-
-            NumberAnimation on y {
-                id: fallingDown
-
-                from: y - (gridView.cellHeight * (Math.floor(index / 6) + 1))
-                to: y
-                running: false
-                duration: 2000
-                alwaysRunToEnd: true
-            }
-
-            Behavior on x {
-                NumberAnimation {
-                    duration: 2000
-                    onRunningChanged: {
-                        if (running)
-                        {
-                            root.countSwapAnimation += 1;
-                        } else {
-                            root.countSwapAnimation -= 1;
-                        }
-                    }
-                }
-            }
-            Behavior on y {
-                NumberAnimation {
-                    duration: 2000
-                    onRunningChanged: {
-                        if (running)
-                        {
-                            root.countSwapAnimation += 1;
-                        } else {
-                            root.countSwapAnimation -= 1;
-                        }
-                    }
-                }
-            }
-            Behavior on color {
-                ColorAnimation { duration: 1000 }
-            }
-
-            ColorAnimation on color {
-                id: blinking
-
-                running: false
-                from: "white"
-                to: color
-                duration: 2000
-                alwaysRunToEnd: true
-                loops: Animation.Infinite
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    if (root.it == -1)
-                    {
-                        root.it = index;
-                        blinking.start();
-                    } else {
-                        if (boardModel.move(root.it, index)) {
-                            boardModel.steps += 1;
-                            root.it2 = index;
-                        } else {
-                            gridView.itemAtIndex(root.it).blink = false;
-                            root.it = index;
-                            blinking.start();
-                        }
-                    }
-                }
-            }
-        }
+        delegate: Tile{}
     }
 
     RowLayout {
@@ -190,11 +103,19 @@ Window {
         standardButtons: StandardButton.Ok | StandardButton.Reset
 
         onAccepted: Qt.quit();
-        onReset: boardModel.restart();
+        onReset: {
+            boardModel.restart();
+            root.firstSelectedItem = -1;
+            root.secondSelectedItem = -1;
+            root.shifted = false;
+            root.filled = false;
+        }
     }
     Connections {
         target: boardModel
+
         function onFinished() {
+            root.gameFinished = true;
             if (boardModel.isWon)
             {
                 winDialog.title = "CONGRATS!";
@@ -203,7 +124,6 @@ Window {
                 winDialog.title = ":(";
                 winDialog.text = "Try again or quit";
             }
-            winDialog.open();
         }
     }
 
