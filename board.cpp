@@ -7,6 +7,11 @@
 #include <random>
 #include <cmath>
 
+namespace {
+    constexpr int cVerticalDirection = 0;
+    constexpr int cHorizontalDirection = 1;
+}
+
 Board::Board() :
     m_dimension{6}
   ,	m_data{Matrix(m_dimension, QVector<Tile>(m_dimension))}
@@ -168,7 +173,6 @@ void Board::addForPopping(QVector<QPoint>& forPopping, int direction)
     }
     if (addForPopping.size() > 1)
     {
-        qDebug() << forPopping;
         forPopping.append(addForPopping);
     }
 }
@@ -183,8 +187,8 @@ bool Board::pop(int inx1, int inx2)
     for (const auto& p : points)
     {
         QVector<QPoint> forPopping{p};
-        addForPopping(forPopping, 0);
-        addForPopping(forPopping, 1);
+        addForPopping(forPopping, cVerticalDirection);
+        addForPopping(forPopping, cHorizontalDirection);
 
         if (forPopping.size() > 2)
         {
