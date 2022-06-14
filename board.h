@@ -15,6 +15,7 @@
 class Board : public QAbstractListModel
 {
     Q_OBJECT
+    
     Q_PROPERTY(int score READ score NOTIFY scoreChanged)
     Q_PROPERTY(int steps READ steps NOTIFY stepsChanged)
     Q_PROPERTY(int scoreToWin READ scoreToWin CONSTANT)
@@ -61,6 +62,7 @@ private:
     bool isMovable(int inx1, int inx2) const;
     bool isValid(const QPoint& p);
     void generateBoard();
+
     QColor randColor(const QPoint& p) const;
     void addForPopping(QVector<QPoint>& forPopping, int direction);
 
