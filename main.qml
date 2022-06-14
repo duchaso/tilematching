@@ -7,36 +7,56 @@ import board 1.0
 Window {
     id: root
 
-    width: 640
-    height: 790
+    width: 480
+    height: 640
     visible: true
-    title: qsTr("Hello World")
+    title: qsTr("Match3")
 
-    property int it: -1
-    property int it2: -1
+    property int firstSelectedItem: -1
+    property int secondSelectedItem: -1
     property int countSwapAnimation: 0
+    property int countFallingDownAnimation: 0
+    property bool gameFinished: false
     property bool shifted: false
+    property bool filled: false
+
+    onCountFallingDownAnimationChanged: {
+        if (countFallingDownAnimation == 0)
+        {
+            if (gameFinished)
+            {
+                winDialog.open();
+                root.gameFinished = false;
+            }
+        }
+    }
 
     onCountSwapAnimationChanged: {
         if (countSwapAnimation == 0)
         {
-            if (!boardModel.pop() && root.it != -1)
+            if (root.firstSelectedItem != -1 && !boardModel.pop(root.firstSelectedItem, root.secondSelectedItem))
             {
-                [gridView.itemAtIndex(root.it2).x, gridView.itemAtIndex(root.it).x] = [gridView.itemAtIndex(root.it).x, gridView.itemAtIndex(root.it2).x];
-                [gridView.itemAtIndex(root.it2).y, gridView.itemAtIndex(root.it).y] = [gridView.itemAtIndex(root.it).y, gridView.itemAtIndex(root.it2).y];
-                boardModel.move(it, it2);
+                boardModel.move(firstSelectedItem, secondSelectedItem);
             } else {
-                if (!shifted)
+                if (root.firstSelectedItem != -1 && !shifted)
                 {
-                    boardModel.shift();
+                    root.filled = boardModel.shift();
                     root.shifted = true;
                 } else {
                     boardModel.fill();
                     root.shifted = false;
                 }
             }
+            root.firstSelectedItem = -1;
+        }
+    }
 
-            root.it = -1;
+    onFilledChanged: {
+        if (filled)
+        {
+            boardModel.fill();
+            root.filled = false;
+            root.shifted = false;
         }
     }
 
@@ -44,123 +64,90 @@ Window {
         id: gridView
 
         anchors.fill: parent
-        cellHeight: root.height / 6
+        cellHeight: root.height / 6 - (root.height - root.width) / 6
         cellWidth: root.width / 6
 
         model: Board {
             id: boardModel
         }
-
-        delegate: Rectangle {
-            property bool ready: false
-            property alias blink: blinking.running
-            property int newIndex: model.index
-            property bool fallDown: model.active
-            height: gridView.cellHeight
-            width: gridView.cellWidth
+        delegate: Tile {
+            newIndex: model.index
+            fallDown: model.active
             color: model.color
 
-            Text {
-                anchors.centerIn: parent
-                text: model.index
-            }
-
-            Component.onCompleted: {
-                ready = true;
-            }
-
-            onNewIndexChanged: {
-                if (ready)
+            onMoveAnimationRunningChanged: root.countSwapAnimation += running ? 1 : -1
+            onFallAnimationRunningChanged: root.countFallingDownAnimation += running ? 1 : -1
+            onClicked: {
+                if (root.firstSelectedItem == -1)
                 {
-                    x = gridView.itemAtIndex(newIndex).x;
-                    y = gridView.itemAtIndex(newIndex).y
-                }
-            }
-
-            onXChanged: {
-                blinking.stop();
-            }
-            onYChanged: {
-                blinking.stop();
-            }
-
-            onFallDownChanged: {
-                if (ready && fallDown)
-                {
-                    fallingDown.start();
-                }
-            }
-
-            NumberAnimation on y {
-                id: fallingDown
-
-                from: y - (height * (index % 6))
-                to: y
-                running: false
-                duration: 1500
-                alwaysRunToEnd: true
-            }
-
-            Behavior on x {
-                NumberAnimation {
-                    duration: 1500
-                    onRunningChanged: {
-                        if (running)
-                        {
-                            root.countSwapAnimation += 1;
-                        } else {
-                            root.countSwapAnimation -= 1;
-                        }
-                    }
-                }
-            }
-            Behavior on y {
-                NumberAnimation {
-                    duration: 1500
-                    onRunningChanged: {
-                        if (running)
-                        {
-                            root.countSwapAnimation += 1;
-                        } else {
-                            root.countSwapAnimation -= 1;
-                        }
-                    }
-                }
-            }
-            Behavior on color {
-                ColorAnimation { duration: 1000 }
-            }
-
-            ColorAnimation on color {
-                id: blinking
-
-                running: false
-                from: "white"
-                to: color
-                duration: 2000
-                alwaysRunToEnd: true
-                loops: Animation.Infinite
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    if (root.it == -1)
-                    {
-                        root.it = index;
-                        blinking.start();
+                    root.firstSelectedItem = index;
+                    blink = true;
+                } else {
+                    if (boardModel.move(root.firstSelectedItem, index)) {
+                        root.secondSelectedItem = index;
                     } else {
-                        if (boardModel.move(root.it, index)) {
-                            root.it2 = index;
-                        } else {
-                            gridView.itemAtIndex(root.it).blink = false;
-                            root.it = index;
-                            blinking.start();
-                        }
+                        gridView.itemAtIndex(root.firstSelectedItem).blink = false;
+                        root.firstSelectedItem = index;
+                        blink = true;
                     }
                 }
             }
         }
     }
+
+    RowLayout {
+        height: root.height - root.width
+        width: root.width
+        x: 0
+        y: root.height - height
+
+        Text {
+            id: scoreWidget
+
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: 30
+            text: "Score: " + boardModel.score + "/" + boardModel.scoreToWin
+        }
+        Text {
+            id: stepsWidget
+
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: 30
+            text: "Steps: " + boardModel.steps + "/" + boardModel.stepsToLose
+        }
+    }
+
+    MessageDialog {
+        id: winDialog
+
+        standardButtons: StandardButton.Ok | StandardButton.Reset
+
+        onAccepted: Qt.quit();
+        onReset: {
+            boardModel.restart();
+            root.firstSelectedItem = -1;
+            root.secondSelectedItem = -1;
+            root.shifted = false;
+            root.filled = false;
+        }
+    }
+    Connections {
+        target: boardModel
+
+        function onFinished(isWon) {
+            root.gameFinished = true;
+            if (isWon)
+            {
+                winDialog.title = "CONGRATS!";
+                winDialog.text = "You won! Try again or quit";
+            } else {
+                winDialog.title = ":(";
+                winDialog.text = "Try again or quit";
+            }
+        }
+    }
+
 }
 
