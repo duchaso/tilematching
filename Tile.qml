@@ -1,14 +1,21 @@
 import QtQuick 2.0
 
 Rectangle {
+    id: root
+
     property bool ready: false
     property alias blink: blinking.running
-    property int newIndex: model.index
-    property bool fallDown: model.active
+    property int newIndex: -1
+    property bool fallDown: false
+
+    signal moveAnimationRunningChanged(bool running)
+    signal fallAnimationRunningChanged(bool running)
+    signal clicked()
+
     height: gridView.cellHeight
     width: gridView.cellWidth
     radius: 100
-    color: model.color
+    color: "transparent"
 
     onXChanged: blinking.stop();
     onYChanged: blinking.stop();
@@ -36,34 +43,20 @@ Rectangle {
         running: false
         duration: 2000
         alwaysRunToEnd: true
-        onStarted: root.countFallingDownAnimation += 1;
-        onStopped: root.countFallingDownAnimation -= 1;
+        onStarted: fallAnimationRunningChanged(running)
+        onStopped: fallAnimationRunningChanged(running)
     }
 
     Behavior on x {
         NumberAnimation {
             duration: 2000
-            onRunningChanged: {
-                if (running)
-                {
-                    root.countSwapAnimation += 1;
-                } else {
-                    root.countSwapAnimation -= 1;
-                }
-            }
+            onRunningChanged: moveAnimationRunningChanged(running)
         }
     }
     Behavior on y {
         NumberAnimation {
             duration: 2000
-            onRunningChanged: {
-                if (running)
-                {
-                    root.countSwapAnimation += 1;
-                } else {
-                    root.countSwapAnimation -= 1;
-                }
-            }
+            onRunningChanged: moveAnimationRunningChanged(running)
         }
     }
     Behavior on color {
@@ -83,21 +76,7 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: {
-            if (root.firstSelectedItem == -1)
-            {
-                root.firstSelectedItem = index;
-                blinking.start();
-            } else {
-                if (boardModel.move(root.firstSelectedItem, index)) {
-                    root.secondSelectedItem = index;
-                } else {
-                    gridView.itemAtIndex(root.firstSelectedItem).blink = false;
-                    root.firstSelectedItem = index;
-                    blinking.start();
-                }
-            }
-        }
+        onClicked: root.clicked()
     }
 
     Component.onCompleted: ready = true;

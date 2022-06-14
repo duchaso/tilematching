@@ -15,11 +15,10 @@
 class Board : public QAbstractListModel
 {
     Q_OBJECT
-    Q_PROPERTY(int score READ score WRITE setScore NOTIFY scoreChanged)
-    Q_PROPERTY(int steps READ steps WRITE setSteps NOTIFY stepsChanged)
-    Q_PROPERTY(int scoreToWin READ scoreToWin NOTIFY scoreToWinChanged)
-    Q_PROPERTY(int stepsToLose READ stepsToLose NOTIFY stepsToLoseChanged)
-    Q_PROPERTY(bool isWon READ isWon NOTIFY isWonChanged)
+    Q_PROPERTY(int score READ score NOTIFY scoreChanged)
+    Q_PROPERTY(int steps READ steps NOTIFY stepsChanged)
+    Q_PROPERTY(int scoreToWin READ scoreToWin CONSTANT)
+    Q_PROPERTY(int stepsToLose READ stepsToLose CONSTANT)
 
     using Matrix = QVector<QVector<Tile>>;
     using Colors = QVector<QColor>;
@@ -48,19 +47,15 @@ public:
     void setScore(int score);
     void setSteps(int steps);
 
-    bool isWon() const;
     int score() const;
     int steps() const;
     int scoreToWin() const;
     int stepsToLose() const;
 
 signals:
-    void finished();
+    void finished(bool isWon);
     void scoreChanged();
     void stepsChanged();
-    void scoreToWinChanged();
-    void stepsToLoseChanged();
-    void isWonChanged();
 
 private:
     bool isMovable(int inx1, int inx2) const;
@@ -77,8 +72,8 @@ private:
     bool m_isWon;
     int m_score;
     int m_steps;
-    int m_scoreToWin;
-    int m_stepsToLose;
+    const int m_scoreToWin;
+    const int m_stepsToLose;
 };
 
 #endif // BOARD_H

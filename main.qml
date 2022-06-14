@@ -70,7 +70,29 @@ Window {
         model: Board {
             id: boardModel
         }
-        delegate: Tile{}
+        delegate: Tile {
+            newIndex: model.index
+            fallDown: model.active
+            color: model.color
+
+            onMoveAnimationRunningChanged: root.countSwapAnimation += running ? 1 : -1
+            onFallAnimationRunningChanged: root.countFallingDownAnimation += running ? 1 : -1
+            onClicked: {
+                if (root.firstSelectedItem == -1)
+                {
+                    root.firstSelectedItem = index;
+                    blink = true;
+                } else {
+                    if (boardModel.move(root.firstSelectedItem, index)) {
+                        root.secondSelectedItem = index;
+                    } else {
+                        gridView.itemAtIndex(root.firstSelectedItem).blink = false;
+                        root.firstSelectedItem = index;
+                        blink = true;
+                    }
+                }
+            }
+        }
     }
 
     RowLayout {
@@ -114,9 +136,9 @@ Window {
     Connections {
         target: boardModel
 
-        function onFinished() {
+        function onFinished(isWon) {
             root.gameFinished = true;
-            if (boardModel.isWon)
+            if (isWon)
             {
                 winDialog.title = "CONGRATS!";
                 winDialog.text = "You won! Try again or quit";

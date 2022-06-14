@@ -202,10 +202,10 @@ bool Board::pop(int inx1, int inx2)
         if (m_score >= m_scoreToWin)
         {
             m_isWon = true;
-            emit finished();
+            emit finished(m_isWon);
         } else if (m_steps == m_stepsToLose) {
             m_isWon = false;
-            emit finished();
+            emit finished(m_isWon);
         }
         isPopped |= (forPopping.size() > 2) ? true : false;
     }
@@ -266,11 +266,6 @@ void Board::setSteps(int steps)
 {
     m_steps = steps;
     emit stepsChanged();
-}
-
-bool Board::isWon() const
-{
-    return m_isWon;
 }
 
 int Board::score() const
