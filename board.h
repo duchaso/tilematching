@@ -2,13 +2,6 @@
 #define BOARD_H
 
 #include <QAbstractListModel>
-#include <QAbstractTableModel>
-#include <QColor>
-#include <QPoint>
-#include <QDebug>
-#include <QStack>
-
-#include <utility>
 
 #include "tile.h"
 
@@ -31,17 +24,24 @@ class Board : public QAbstractListModel
         LEFT,
     };
 
+    enum class BoardState {
+        Select,
+        Swap,
+        Pop,
+        Shift,
+        Fill,
+        None,
+    };
+
 public:
     Board();
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) override;
 
-    Q_INVOKABLE bool move(int inx1, int inx2);
-    Q_INVOKABLE bool pop(int inx1, int inx2);
-    Q_INVOKABLE bool shift();
-    Q_INVOKABLE void fill();
+    Q_INVOKABLE void doSomething(int inx = -1);
     Q_INVOKABLE void restart();
 
     void setScore(int score);
@@ -58,6 +58,10 @@ signals:
     void stepsChanged();
 
 private:
+    bool move();
+    bool pop();
+    bool shift();
+    void fill();
     bool isMovable(int inx1, int inx2) const;
     bool isValid(const QPoint& p);
     void generateBoard();
@@ -74,6 +78,10 @@ private:
     int m_steps;
     const int m_scoreToWin;
     const int m_stepsToLose;
+    BoardState m_state;
+    QPoint m_firstItem;
+    QPoint m_secondItem;
+
 };
 
 #endif // BOARD_H

@@ -12,13 +12,9 @@ Window {
     visible: true
     title: qsTr("Match3")
 
-    property int firstSelectedItem: -1
-    property int secondSelectedItem: -1
     property int countSwapAnimation: 0
     property int countFallingDownAnimation: 0
     property bool gameFinished: false
-    property bool shifted: false
-    property bool filled: false
 
     onCountFallingDownAnimationChanged: {
         if (countFallingDownAnimation == 0)
@@ -27,6 +23,8 @@ Window {
             {
                 winDialog.open();
                 root.gameFinished = false;
+            } else {
+                boardModel.doSomething();
             }
         }
     }
@@ -34,29 +32,7 @@ Window {
     onCountSwapAnimationChanged: {
         if (countSwapAnimation == 0)
         {
-            if (root.firstSelectedItem != -1 && !boardModel.pop(root.firstSelectedItem, root.secondSelectedItem))
-            {
-                boardModel.move(firstSelectedItem, secondSelectedItem);
-            } else {
-                if (root.firstSelectedItem != -1 && !shifted)
-                {
-                    root.filled = boardModel.shift();
-                    root.shifted = true;
-                } else {
-                    boardModel.fill();
-                    root.shifted = false;
-                }
-            }
-            root.firstSelectedItem = -1;
-        }
-    }
-
-    onFilledChanged: {
-        if (filled)
-        {
-            boardModel.fill();
-            root.filled = false;
-            root.shifted = false;
+            boardModel.doSomething();
         }
     }
 
@@ -74,24 +50,19 @@ Window {
             newIndex: model.index
             fallDown: model.active
             color: model.color
+            blink: model.selected
 
             onMoveAnimationRunningChanged: root.countSwapAnimation += running ? 1 : -1
-            onFallAnimationRunningChanged: root.countFallingDownAnimation += running ? 1 : -1
-            onClicked: {
-                if (root.firstSelectedItem == -1)
-                {
-                    root.firstSelectedItem = index;
-                    blink = true;
+            onFallAnimationRunningChanged: {
+                console.log(index);
+                if (running) {
+                    root.countFallingDownAnimation += 1;
                 } else {
-                    if (boardModel.move(root.firstSelectedItem, index)) {
-                        root.secondSelectedItem = index;
-                    } else {
-                        gridView.itemAtIndex(root.firstSelectedItem).blink = false;
-                        root.firstSelectedItem = index;
-                        blink = true;
-                    }
+                    root.countFallingDownAnimation -= 1;
+                    model.active = false;
                 }
             }
+            onClicked: boardModel.doSomething(index);
         }
     }
 
@@ -127,10 +98,6 @@ Window {
         onAccepted: Qt.quit();
         onReset: {
             boardModel.restart();
-            root.firstSelectedItem = -1;
-            root.secondSelectedItem = -1;
-            root.shifted = false;
-            root.filled = false;
         }
     }
     Connections {

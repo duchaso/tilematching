@@ -25,12 +25,16 @@ public:
     void setPos(const int pos);
     int pos() const;
 
+    void setSelected(const bool state);
+    bool selected() const;
+
     static void swapPosition(Tile& first, Tile& second);
 
 private:
     QColor m_color;
     int m_pos;
     bool m_active;
+    bool m_selected = false;
 };
 
 #endif // TILE_H
