@@ -24,7 +24,7 @@ Window {
                 winDialog.open();
                 root.gameFinished = false;
             } else {
-                boardModel.doSomething();
+                boardModel.executeTileAction();
             }
         }
     }
@@ -32,7 +32,7 @@ Window {
     onCountSwapAnimationChanged: {
         if (countSwapAnimation == 0)
         {
-            boardModel.doSomething();
+            boardModel.executeTileAction();
         }
     }
 
@@ -54,7 +54,6 @@ Window {
 
             onMoveAnimationRunningChanged: root.countSwapAnimation += running ? 1 : -1
             onFallAnimationRunningChanged: {
-                console.log(index);
                 if (running) {
                     root.countFallingDownAnimation += 1;
                 } else {
@@ -62,7 +61,7 @@ Window {
                     model.active = false;
                 }
             }
-            onClicked: boardModel.doSomething(index);
+            onClicked: boardModel.executeTileAction(index);
         }
     }
 

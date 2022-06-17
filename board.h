@@ -33,6 +33,13 @@ class Board : public QAbstractListModel
         None,
     };
 
+    enum RoleNames {
+        ColorRole = Qt::DecorationRole,
+        ActiveRole = Qt::UserRole,
+        IndexRole,
+        SelectedRole,
+    };
+
 public:
     Board();
 
@@ -41,7 +48,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
 
-    Q_INVOKABLE void doSomething(int inx = -1);
+    Q_INVOKABLE void executeTileAction(int inx = -1);
     Q_INVOKABLE void restart();
 
     void setScore(int score);
@@ -58,7 +65,7 @@ signals:
     void stepsChanged();
 
 private:
-    bool move();
+    void move();
     bool pop();
     bool shift();
     void fill();
@@ -67,6 +74,7 @@ private:
     void generateBoard();
     QColor randColor(const QPoint& p) const;
     void addForPopping(QVector<QPoint>& forPopping, int direction);
+    void setBlinking(bool state);
 
 private:
     const int m_dimension;
