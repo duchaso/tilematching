@@ -17,9 +17,6 @@ Rectangle {
     radius: 100
     color: "transparent"
 
-    onXChanged: blinking.stop();
-    onYChanged: blinking.stop();
-
     onNewIndexChanged: {
         if (ready)
         {

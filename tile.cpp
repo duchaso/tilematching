@@ -80,8 +80,20 @@ int Tile::pos() const
     return m_pos;
 }
 
+void Tile::setSelected(const bool state)
+{
+    m_selected = state;
+}
+
+bool Tile::selected() const
+{
+    return m_selected;
+}
+
 void Tile::swapPosition(Tile &first, Tile &second)
 {
+    first.m_selected = false;
+    second.m_selected = false;
     auto tmp = first.pos();
     first.setPos(second.pos());
     second.setPos(tmp);
