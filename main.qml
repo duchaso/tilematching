@@ -24,7 +24,7 @@ Window {
                 winDialog.open();
                 root.gameFinished = false;
             } else {
-                boardModel.executeTileAction();
+                boardModel.fallFinished();
             }
         }
     }
@@ -32,7 +32,7 @@ Window {
     onCountSwapAnimationChanged: {
         if (countSwapAnimation == 0)
         {
-            boardModel.executeTileAction();
+            boardModel.swapFinished();
         }
     }
 
@@ -61,7 +61,7 @@ Window {
                     model.active = false;
                 }
             }
-            onClicked: boardModel.executeTileAction(index);
+            onClicked: boardModel.tileClicked(index);
         }
     }
 

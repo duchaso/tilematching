@@ -68,22 +68,15 @@ bool Board::setData(const QModelIndex &index, const QVariant &value, int role)
     }
 }
 
-void Board::executeTileAction(int inx)
+void Board::executeTileAction()
 {
-    if (m_firstItem == cInvalidPoint && inx != -1)
-    {
-        m_state = BoardState::Select;
-    }
-
     switch (m_state) {
     case BoardState::Select: {
-        m_firstItem = {inx / m_dimension, inx % m_dimension};
         setBlinking(true);
         m_state = BoardState::Swap;
         break;
     }
     case BoardState::Swap: {
-        m_secondItem = {inx / m_dimension, inx % m_dimension};
         if (!isMovable(m_firstItem.x() * m_dimension + m_firstItem.y(),
                        m_secondItem.x() * m_dimension + m_secondItem.y()))
         {
@@ -211,6 +204,28 @@ void Board::restart()
     m_firstItem = cInvalidPoint;
     setScore(0);
     setSteps(0);
+}
+
+void Board::tileClicked(int inx)
+{
+    if (m_state == BoardState::None)
+    {
+        m_firstItem = {inx / m_dimension, inx % m_dimension};
+        m_state = BoardState::Select;
+    } else if (m_state == BoardState::Swap) {
+        m_secondItem = {inx / m_dimension, inx % m_dimension};
+    }
+    executeTileAction();
+}
+
+void Board::swapFinished()
+{
+    executeTileAction();
+}
+
+void Board::fallFinished()
+{
+    executeTileAction();
 }
 
 bool Board::isMovable(int inx1, int inx2) const

@@ -48,8 +48,6 @@ public:
     QHash<int, QByteArray> roleNames() const override;
     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
 
-    Q_INVOKABLE void executeTileAction(int inx = -1);
-    Q_INVOKABLE void restart();
 
     void setScore(int score);
     void setSteps(int steps);
@@ -58,6 +56,12 @@ public:
     int steps() const;
     int scoreToWin() const;
     int stepsToLose() const;
+
+public slots:
+    void restart();
+    void tileClicked(int inx);
+    void swapFinished();
+    void fallFinished();
 
 signals:
     void finished(bool isWon);
@@ -75,6 +79,7 @@ private:
     QColor randColor(const QPoint& p) const;
     void addForPopping(QVector<QPoint>& forPopping, int direction);
     void setBlinking(bool state);
+    void executeTileAction();
 
 private:
     const int m_dimension;
