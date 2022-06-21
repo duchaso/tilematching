@@ -37,13 +37,13 @@ int Board::rowCount(const QModelIndex &parent) const
 QVariant Board::data(const QModelIndex &index, int role) const
 {
     switch (role) {
-    case Qt::DecorationRole:
+    case ColorRole:
         return m_data[index.row()/m_dimension][index.row()%m_dimension].color();
-    case Qt::UserRole:
+    case ActiveRole:
         return m_data[index.row()/m_dimension][index.row()%m_dimension].isActive();
-    case Qt::UserRole + 1:
+    case IndexRole:
         return m_data[index.row()/m_dimension][index.row()%m_dimension].pos();
-    case Qt::UserRole + 2:
+    case SelectedRole:
         return m_data[index.row()/m_dimension][index.row()%m_dimension].selected();
     default:
         break;
@@ -53,88 +53,75 @@ QVariant Board::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> Board::roleNames() const
 {
-    return { {Qt::DecorationRole, "color"}, {Qt::UserRole, "active"}, {Qt::UserRole + 1, "index"}, {Qt::UserRole + 2, "selected"} };
+    return { {ColorRole, "color"}, {ActiveRole, "active"}, {IndexRole, "index"}, {SelectedRole, "selected"} };
 }
 
 bool Board::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     switch (role) {
-    case Qt::UserRole:
+    case ActiveRole:
         m_data[index.row()/m_dimension][index.row()%m_dimension].setActive(value.toBool());
-        emit dataChanged(index, index, {Qt::UserRole});
+        emit dataChanged(index, index, {ActiveRole});
         return true;
     default:
         return false;
     }
 }
 
-void Board::doSomething(int inx)
+void Board::executeTileAction()
 {
-    if (m_firstItem == cInvalidPoint && inx != -1)
-    {
-        m_state = BoardState::Select;
-    }
-
     switch (m_state) {
-    case BoardState::Select:
-        m_firstItem = {inx / m_dimension, inx % m_dimension};
-        m_data[m_firstItem.x()][m_firstItem.y()].setSelected(true);
-        emit dataChanged(this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
-                         this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
-                         {Qt::UserRole + 2});
+    case BoardState::Select: {
+        setBlinking(true);
         m_state = BoardState::Swap;
         break;
-    case BoardState::Swap:
-        m_secondItem = {inx / m_dimension, inx % m_dimension};
+    }
+    case BoardState::Swap: {
         if (!isMovable(m_firstItem.x() * m_dimension + m_firstItem.y(),
-                   m_secondItem.x() * m_dimension + m_secondItem.y()))
+                       m_secondItem.x() * m_dimension + m_secondItem.y()))
         {
-            m_data[m_firstItem.x()][m_firstItem.y()].setSelected(false);
-            emit dataChanged(this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
-                             this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
-                             {Qt::UserRole + 2});
+            setBlinking(false);
             m_firstItem = m_secondItem;
-            m_data[m_firstItem.x()][m_firstItem.y()].setSelected(true);
-            emit dataChanged(this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
-                             this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
-                             {Qt::UserRole + 2});
+            setBlinking(true);
         } else {
-            m_data[m_firstItem.x()][m_firstItem.y()].setSelected(false);
-            emit dataChanged(this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
-                             this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
-                             {Qt::UserRole + 2});
+            setBlinking(false);
             move();
             m_state = BoardState::Pop;
         }
         break;
-    case BoardState::Pop:
+    }
+    case BoardState::Pop: {
         if (!pop())
         {
             move();
             m_state = BoardState::None;
         } else {
             m_state = BoardState::Shift;
-            doSomething();
+            executeTileAction();
         }
         break;
-    case BoardState::Shift:
+    }
+    case BoardState::Shift: {
         m_state = BoardState::Fill;
         if (!shift())
         {
-            doSomething();
+            executeTileAction();
         }
         break;
-    case BoardState::Fill:
+    }
+    case BoardState::Fill: {
         fill();
         m_state = BoardState::None;
         break;
-    default:
+    }
+    default: {
         m_firstItem = cInvalidPoint;
         break;
     }
+    }
 }
 
-bool Board::move()
+void Board::move()
 {
     Tile::swapPosition(m_data[m_firstItem.x()][m_firstItem.y()], m_data[m_secondItem.x()][m_secondItem.y()]);
     emit dataChanged(this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
@@ -142,7 +129,6 @@ bool Board::move()
     emit dataChanged(this->index(m_secondItem.x() * m_dimension + m_secondItem.y()),
                      this->index(m_secondItem.x() * m_dimension + m_secondItem.y()));
     std::swap(m_data[m_firstItem.x()][m_firstItem.y()], m_data[m_secondItem.x()][m_secondItem.y()]);
-    return true;
 }
 
 bool Board::shift()
@@ -171,7 +157,7 @@ bool Board::shift()
                     Tile::swapPosition(m_data[top.x()][top.y()], m_data[bottom.x()][bottom.y()]);
                     emit dataChanged(this->index(top.x() * m_dimension + top.y()),
                                      this->index(top.x() * m_dimension + top.y()),
-                                     {Qt::UserRole + 1});
+                                     {IndexRole});
                     std::swap(m_data[top.x()][top.y()], m_data[bottom.x()][bottom.y()]);
                     isShifted = true;
 
@@ -200,14 +186,13 @@ void Board::fill()
         }
     }
     endResetModel();
-    qDebug() << v;
     for (const auto& i : v)
     {
         m_data[i.x()][i.y()].setActive(true);
     }
     emit dataChanged(this->index(v.first().x() * m_dimension + v.first().y()),
                      this->index(v.last().x() * m_dimension + v.last().y()),
-                     {Qt::UserRole});
+                     {ActiveRole});
 }
 
 void Board::restart()
@@ -219,6 +204,28 @@ void Board::restart()
     m_firstItem = cInvalidPoint;
     setScore(0);
     setSteps(0);
+}
+
+void Board::tileClicked(int inx)
+{
+    if (m_state == BoardState::None)
+    {
+        m_firstItem = {inx / m_dimension, inx % m_dimension};
+        m_state = BoardState::Select;
+    } else if (m_state == BoardState::Swap) {
+        m_secondItem = {inx / m_dimension, inx % m_dimension};
+    }
+    executeTileAction();
+}
+
+void Board::swapFinished()
+{
+    executeTileAction();
+}
+
+void Board::fallFinished()
+{
+    executeTileAction();
 }
 
 bool Board::isMovable(int inx1, int inx2) const
@@ -254,6 +261,14 @@ void Board::addForPopping(QVector<QPoint>& forPopping, int direction)
     {
         forPopping.append(addForPopping);
     }
+}
+
+void Board::setBlinking(bool state)
+{
+    m_data[m_firstItem.x()][m_firstItem.y()].setSelected(state);
+    emit dataChanged(this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
+                     this->index(m_firstItem.x() * m_dimension + m_firstItem.y()),
+                     {SelectedRole});
 }
 bool Board::pop()
 {
